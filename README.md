@@ -1,125 +1,212 @@
 # trysquare-starter
 
-De quoi rejouer une seule expérience de la formation, `issue1-contexte`, dans un
-environnement qu'on jette après : les leviers de contexte du module 2.1 mesurés
-contre le rebond de l'issue #1 de NÉON, neuf configurations, un levier à la fois.
+Everything needed to replay one experiment of the course, `issue1-context`, in an environment you
+throw away afterwards: the context levers of module 2.1 measured against the bounce of issue #1 of
+NEON, nine configurations, one lever at a time.
 
-Le dépôt ne contient pas l'outil de mesure. [trysquare](https://github.com/AI-for-dev/trysquare)
-est un paquet Python installé dans un venv local ; ce qui vit ici est le
-matériau de l'expérience, c'est-à-dire le scénario, les briques, l'hypothèse
-écrite avant la mesure, et le validateur qui note.
+The repository does not contain the measuring tool. [trysquare](https://github.com/AI-for-dev/trysquare)
+is a Python package installed in a local venv; what lives here is the material of the experiment,
+that is to say the scenario, the pieces given to the agent, the hypothesis written before
+measuring, and the validator that scores.
 
-## Démarrer
+## What you need before starting
 
-```bash
-./setup.sh                      # prérequis, venv, trysquare, rappel sur le fournisseur
-./mesurer.sh --dry-run          # le plan complet, sans rien dépenser
-./mesurer.sh --repetitions 3    # une passe de fumée
-./mesurer.sh                    # la matrice, 20 répétitions par configuration
-```
-
-`setup.sh` vérifie `git`, `node` et `uv`, propose d'installer `pi` avec
-l'installateur de [pi.dev](https://pi.dev) s'il manque, puis lance `uv sync`.
-Ce dernier crée `.venv` et écrit `uv.lock`, qui épingle trysquare et ses
-dépendances. Le scénario épingle déjà le dépôt mesuré par un tag ; ce verrou
-épingle l'outil qui le mesure, sans quoi deux machines rendraient deux matrices
-sans qu'on sache laquelle a changé. `./setup.sh --check` ne modifie rien et dit
-seulement ce qui manque.
-
-`mesurer.sh` met `.venv/bin` en tête du `PATH`, donne à `$TMPDIR` un repli
-`/tmp`, écrit dans `results/`, et ajoute une ligne à `results/journal.md` pour
-toute mesure qui a réellement dépensé. Un `-dirty` dans cette ligne signale une
-mesure qu'on ne saura pas reproduire exactement. Les sous-commandes qui ne
-dépensent rien passent telles quelles :
-
-```bash
-./mesurer.sh render results/issue1-contexte_…
-./mesurer.sh replay results/issue1-contexte_… --scenario scenarios/issue1-contexte.toml --rescore
-./mesurer.sh compare results/… results/…
-```
-
-## Ce qu'il faut avoir avant
-
-| prérequis | pourquoi |
+| prerequisite | why |
 | --- | --- |
-| `uv` | crée le venv et installe trysquare |
-| `node` >= 20 | la sonde de notation est une suite `node:test`, lancée avec `--test-reporter` |
-| `git` | trysquare clone NÉON sur son tag, et le validateur y lit sa référence |
-| `pi` | le harnais mesuré, installé depuis [pi.dev](https://pi.dev) |
-| un fournisseur de modèles | déclaré dans `~/.pi/agent/models.json`, voir [la documentation de pi](https://pi.dev/docs/latest/providers) |
-| un accès réseau | GitHub pour NÉON et l'extension, TestPyPI et PyPI pour l'installation, le fournisseur pour les appels |
+| `uv` | creates the venv and installs trysquare |
+| `node` >= 20 | the scoring probe is a `node:test` suite, run with `--test-reporter` |
+| `git` | trysquare clones NEON on its tag, and the validator reads its reference there |
+| `pi` | the harness being measured, installed from [pi.dev](https://pi.dev) |
+| a model provider | declared in `~/.pi/agent/models.json`, see [the pi documentation](https://pi.dev/docs/latest/providers) |
+| network access | GitHub for NEON and the extension, TestPyPI and PyPI for the installation, the provider for the calls |
 
-Le scénario déclare son fournisseur et son modèle dans sa table `[agent]`,
-parce que ce sont les deux valeurs qui décident de ce qui est mesuré et qu'un
-héritage depuis le shell les rendrait invisibles au lecteur du fichier. Si vous
-n'avez pas ce fournisseur, changez ces deux lignes avant de lancer. Les tables
-publiées dans le cours ont été mesurées sur `ilaas` et `gemma-4-31b`, contre le
-commit `d62ccd1f` de NÉON.
+### Install pi
 
-## Le coût
+pi is the agent harness the matrix measures. Its official installer:
 
-Vingt répétitions sur neuf configurations demandent deux à trois heures et les
-jetons qui vont avec. Commencez par `--dry-run`, qui ne dépense rien, puis par
-`--repetitions 3`, qui suffit à voir la dispersion : le nom du répertoire de
-sortie porte le nombre de répétitions, donc une passe de fumée ne se confond pas
-avec la vraie matrice.
+```bash
+curl -fsSL https://pi.dev/install.sh | sh
+pi --version
+```
 
-## Disposition
+If `pi` is not on the `PATH` afterwards, open a new shell or add its directory to the `PATH`
+yourself.
+
+pi then needs a provider and an API key, which cannot come from this repository: the key is
+personal, and `~/.pi/agent/models.json` is the file pi reads. The shape of that file is described
+in [the pi documentation](https://pi.dev/docs/latest/providers). The scenario declares the provider
+and the model it expects, so read `[agent]` in `scenarios/issue1-context.toml` and make sure that
+provider is the one your `models.json` declares, or change those two lines.
+
+### Install trysquare with uv
+
+`pyproject.toml` says where trysquare comes from, and uv does the rest. If you do not have uv yet:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then, from the root of this repository:
+
+```bash
+uv sync
+```
+
+This creates `.venv`, installs trysquare and its dependencies, and writes `uv.lock`. That lock file
+is what makes a measurement repeatable: the scenario pins the measured repo by a tag, but nothing
+pins trysquare itself, and a harness that does not pin itself measures the operator. Version the
+lock file.
+
+trysquare is published on TestPyPI while its release path is what is being tried out, and its
+dependencies come from PyPI. An install therefore has to reach both indexes. `pyproject.toml`
+declares the named index as `explicit`, so uv only looks at TestPyPI for the package that names
+it as its source; everything else comes from PyPI, and TestPyPI cannot silently supply a namesake
+dependency. Outside uv, the same thing is
+`pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ trysquare`.
+
+There is no `--version` flag. What checks the install, and the wiring of the experiment with it,
+is `validate`: it loads the scenario, resolves the repository, checks that every path it
+references exists, and spends no token.
+
+```bash
+uv run trysquare validate scenarios/issue1-context.toml
+```
+
+It ends on `ok: nothing this scenario references is missing`, and notes it when `pi` is absent
+from the `PATH`, since a run would then refuse.
+
+## Running the matrix
+
+`uv run` puts `.venv/bin` at the head of the `PATH` for the command it launches, which matters:
+trysquare runs the validator as a subprocess, and `validators/issue1.py` imports `trysquare.assay`
+under a `/usr/bin/env python3` shebang. Without that, it would land on the system python, which
+does not know the package.
+
+```bash
+uv run trysquare run scenarios/issue1-context.toml --output results --dry-run
+uv run trysquare run scenarios/issue1-context.toml --output results --repetitions 3
+uv run trysquare run scenarios/issue1-context.toml --output results
+```
+
+The first one prints the full plan without spending anything. The second is a smoke pass, enough to
+see the spread; the number of repetitions goes into the name of the output directory, so it cannot
+be confused with the real matrix. The third runs the matrix as the scenario declares it, 20
+repetitions per configuration.
+
+Clones and sessions live under `$TMPDIR/trysquare`, and trysquare falls back to the system
+temporary directory when the shell defines no `$TMPDIR`. Nothing to set, and nothing durable to
+clean up: the archive under `results/` keeps sources, and `replay` rebuilds a tree from a tag and
+a diff when one is needed.
+
+The subcommands that spend nothing take the same form. `render` and `replay` read the scenario,
+not only the output directory, because that is where the metrics and the verdict are declared:
+
+```bash
+uv run trysquare render scenarios/issue1-context.toml --output results
+uv run trysquare replay results/issue1-context_… --scenario scenarios/issue1-context.toml --rescore
+uv run trysquare compare results/… results/…
+```
+
+### Why there is a `trysquare.toml`
+
+A scenario names a repository by a logical name, `repo = "neon"`, and only a config file says
+what that name points at on this machine. trysquare looks for `trysquare.toml` by walking up from
+the scenario, so this one covers the whole directory. Two tables are all it holds, `[repos]` and
+`[harness]`; everything else it could carry, from `workdir` to `concurrency`, already has the same
+value built into the tool.
+
+## Where to change the model and the concurrency
+
+Both live in `scenarios/issue1-context.toml`, and nowhere else.
+
+The provider and the model are in the `[agent]` table:
+
+```toml
+[agent]
+provider = "test-ilaas"
+model = "gemma-4-31b_alt"
+thinking = "off"
+```
+
+They are declared in the scenario, and never inherited from the shell, because they are the two
+values that decide what is being measured: an environment variable would make them invisible to
+whoever reads the file. If you do not have that provider, change these two lines before running.
+The tables published in the course were measured on `ilaas` and `gemma-4-31b`, against commit
+`d62ccd1f` of NEON.
+
+The number of concurrent runs is in the `[protocol]` table, with the rest of the protocol:
+
+```toml
+[protocol]
+repetitions = 20
+concurrency = 30
+timeout = 1800
+attempts = 5
+```
+
+`concurrency` is how many runs trysquare launches at the same time. Lower it if your provider rate
+limits you, or if the machine cannot take it. `run` takes `--repetitions`, `--concurrency` and
+`--timeout` as overrides for one run, and records them, so trying a lower concurrency does not
+mean editing the scenario; `attempts` is read from the file only.
+
+A scenario that said nothing here would fall back to the tool's own values, 5 and 900 and 3. This
+one says something, so the values that run are the ones above.
+
+## The cost
+
+Twenty repetitions over nine configurations take two to three hours and the tokens that go with
+them. Start with `--dry-run`, which spends nothing, then with `--repetitions 3`.
+
+## Layout
 
 ```
 trysquare-starter/
-  pyproject.toml     d'où vient trysquare, et rien d'autre
-  setup.sh           prérequis, venv, rappel sur le fournisseur
-  mesurer.sh         l'outil, la config, et la trace de ce qui a tourné
-  trysquare.toml     chemins machine : où est NÉON, où vivent les clones jetables
-  scenarios/         l'expérience, en un fichier TOML autonome
-  hypotheses/        ce qui est prédit, écrit avant de mesurer
-  briques/           prompts, AGENTS.md, prompt système, compétence, sonde
-  validateurs/       ce qui note
-  results/           une matrice par répertoire, plus le journal
+  pyproject.toml     where trysquare comes from, and nothing else
+  trysquare.toml     what the logical names `neon` and `websearch` point at, and nothing else
+  scenarios/         the experiment, in one self contained TOML file
+  hypotheses/        what is predicted, written before measuring
+  materials/         prompts, AGENTS.md, system prompt, skill, probe
+  validators/        what scores
+  results/           one matrix per directory
 ```
 
-Les chemins d'un scénario sont relatifs au scénario, ce qui rend le répertoire
-déplaçable d'un bloc.
+The paths of a scenario are relative to the scenario, which makes the directory movable in one
+piece.
 
-## L'expérience
+## The experiment
 
-Neuf configurations, dont une base `nothing` qui ne déclare aucun delta et
-reproduit ce que fait quelqu'un le premier jour : la demande négligée, pas de
-fichier de règles, pas de budget de raisonnement, le prompt système de l'agent.
-Chacune des autres ajoute ou retire une pièce, et le fichier
-`scenarios/issue1-contexte.toml` dit en commentaire pourquoi chacune est là.
+Nine configurations, including a `nothing` base that declares no delta and reproduces what somebody
+does on day one: the careless request, no rules file, no reasoning budget, the agent's own system
+prompt. Each of the others adds or removes one piece, and `scenarios/issue1-context.toml` says in a
+comment why each one is there.
 
-Le critère est `rebond_briques`, et c'est une sonde plutôt qu'un motif dans le
-diff : `briques/sonde-fournie/sonde.test.js` pose une balle déjà en recouvrement
-avec une brique, appelle `frame()`, et regarde quelle composante de vitesse
-s'inverse. Ce que l'issue #1 demande est un comportement, que la sonde exécute,
-là où un motif cherché dans le diff dépendrait de la façon dont l'agent a écrit
-sa correction.
+The criterion is `bounce_bricks`, and it is a probe rather than a pattern in the diff:
+`materials/provided-probe/probe.test.js` places a ball already overlapping a brick, calls `frame()`,
+and watches which component of the speed flips. What issue #1 asks for is a behaviour, which the
+probe executes, where a pattern looked for in the diff would depend on how the agent wrote its
+correction.
 
-Le validateur rend onze métriques, que le scénario déclare une à une. Une
-métrique déclarée mais absente du validateur ne coûte pas la matrice : elle fait
-échouer le validateur, l'exécution est gardée, et `replay --rescore` la renote
-sans dépenser un jeton.
+The validator returns twelve metrics, which the scenario declares one by one. A metric that is
+declared but missing from the validator does not cost the matrix: it makes the validator fail, the
+run is kept, and `replay --rescore` scores it again without spending a token.
 
-Ses tests tournent hors ligne et ne demandent aucun modèle :
+Its tests run offline and need no model:
 
 ```bash
-cd validateurs && uv run --project .. python -m unittest test_issue1
+cd validators && uv run --project .. python -m unittest test_issue1
 ```
 
-## Modifier l'expérience
+## Changing the experiment
 
-Copiez `scenarios/issue1-contexte.toml`, changez une configuration, relancez.
-Vous n'aurez touché ni l'outil, ni le validateur, ni les autres configurations.
+Copy `scenarios/issue1-context.toml`, change one configuration, run it again. You will have touched
+neither the tool, nor the validator, nor the other configurations.
 
-Le matériau de `briques/` est en revanche une entrée expérimentale : changer un
-mot d'un prompt change la mesure et périme les tables déjà publiées. Ajoutez une
-brique à côté et déclarez-la comme une cellule de plus, plutôt que de réécrire
-celle qui a servi.
+The material in `materials/` is an experimental input, though: changing one word of a prompt changes
+the measurement and invalidates the tables already published. Add a piece next to it and declare it
+as one more cell, rather than rewriting the one that has already served.
 
-## Où aller ensuite
+## Where to go next
 
-- [trysquare](https://github.com/AI-for-dev/trysquare) et sa [documentation](https://ai-for-dev.github.io/trysquare/), pour l'écriture d'un scénario
-- [NÉON](https://github.com/AI-for-dev/neon), le dépôt mesuré, et son `ISSUES.md`
-- [pi](https://pi.dev), le harnais mesuré
+- [trysquare](https://github.com/AI-for-dev/trysquare) and its [documentation](https://ai-for-dev.github.io/trysquare/), for writing a scenario
+- [NEON](https://github.com/AI-for-dev/neon), the measured repo, and its `ISSUES.md`
+- [pi](https://pi.dev), the harness being measured

@@ -1,20 +1,19 @@
-# Le seul rôle de ce fichier est de dire d'où vient trysquare.
+# The only role of this file is to say where trysquare comes from.
 #
-# `uv sync` crée `.venv` et écrit `uv.lock`, qui épingle trysquare et toutes ses
-# dépendances transitives. Versionner ce verrou est ce qui rend une mesure
-# refaisable : trysquare épingle le dépôt mesuré par un tag, mais rien n'épingle
-# trysquare lui-même, et un harnais qui ne s'épingle pas mesure l'opérateur.
+# `uv sync` creates `.venv` and writes `uv.lock`, which pins trysquare and all its transitive
+# dependencies. Versioning that lock file is what makes a measurement repeatable: trysquare pins
+# the measured repo by a tag, but nothing pins trysquare itself, and a harness that does not pin
+# itself measures the operator.
 [project]
 name = "trysquare-starter"
 version = "0"
-description = "Environnement jetable pour rejouer le scénario issue1-contexte"
+description = "Throwaway environment for replaying the issue1-context scenario"
 requires-python = ">=3.12"
 dependencies = ["trysquare"]
 
-# trysquare est publié sur TestPyPI, ses dépendances sur PyPI. L'index nommé est
-# déclaré `explicit`, donc uv n'y cherche que les paquets qui le désignent en
-# source : les autres viennent de PyPI, et TestPyPI ne peut pas fournir en
-# silence une dépendance homonyme.
+# trysquare is published on TestPyPI, its dependencies on PyPI. The named index is declared
+# `explicit`, so uv only looks there for the packages that name it as their source: the others come
+# from PyPI, and TestPyPI cannot silently supply a namesake dependency.
 [[tool.uv.index]]
 name = "testpypi"
 url = "https://test.pypi.org/simple/"

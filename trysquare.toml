@@ -1,42 +1,27 @@
-# Chemins machine de l'établi, et rien d'autre.
+# Machine paths of the workbench, and nothing else.
 #
-# Ce fichier remplace entièrement les variables d'environnement. Une variable
-# d'environnement est un héritage invisible : le lecteur d'un scénario ne la voit
-# pas, l'archive ne l'enregistre pas, et la valeur qui a réellement tourné est
-# celle que le shell contenait par hasard.
+# This file exists for one reason: a scenario names a repository by a logical name, and only a
+# config file can say what that name points at on this machine. `scenarios/issue1-context.toml`
+# writes `repo = "neon"` and a harness brick writes `repo = "websearch"`, so without these two
+# tables a run refuses before it starts.
 #
-# RÈGLE DURE, vérifiée au chargement : ce fichier ne peut fournir que des
-# **chemins machine et des valeurs de repli**. Écrire `provider`, `model`,
-# `thinking`, `etalon` ou `repetitions` dans [defaults] lève une erreur. Ces clés
-# décident de ce qui est mesuré, donc elles sont obligatoires dans le scénario -
-# sinon le même fichier mesurerait autre chose sur une autre machine.
+# Everything else trysquare would accept here is left out on purpose, because the values this
+# experiment wants are already the built-in ones: `workdir` defaults to `$TMPDIR/trysquare` and
+# falls back to the system temporary directory when `$TMPDIR` is unset, `concurrency` to 5,
+# `timeout` to 900, `attempts` to 3, `draws` to 10000 and `seed` to 20260729. The scenario sets
+# its own protocol anyway, so a `[defaults]` table here would only restate the tool.
+#
+# HARD RULE, checked at load time: this file can only provide **machine paths and fallback
+# values**. Writing `provider`, `model`, `thinking`, `etalon` or `repetitions` in [defaults]
+# raises an error. Those keys decide what is measured, so they are mandatory in the scenario,
+# otherwise the same file would measure something else on another machine.
 
-# Dépôts mesurables, par nom logique. Un scénario écrit `repo = "neon"`.
-# Un chemin local convient aussi, relatif à ce fichier ; l'URL évite au stagiaire
-# d'avoir à cloner NÉON lui-même, au prix d'un accès réseau à GitHub.
+# Measurable repositories, by logical name. A local path works too, relative to this file; the
+# URL saves the trainee from cloning NEON himself, at the price of network access to GitHub. A
+# URL is cloned once, at the etalon tag, and every run then clones from that local copy.
 [repos]
 neon = "https://github.com/AI-for-dev/neon.git"
 
-# La brique `extension` du scénario cite ce dépôt par son nom logique.
+# The `extension` brick of the scenario cites this repository by its logical name.
 [harness]
 websearch = "https://github.com/sebaxzero/pi-safe-search"
-
-[defaults]
-# Les clones vivent dans le répertoire temporaire du système, que macOS purge au
-# redémarrage. C'est voulu : l'archive durable ne garde que des sources, et
-# `replay` reconstitue un arbre depuis un tag et un diff quand il en faut un.
-# `mesurer.sh` donne à `$TMPDIR` un repli `/tmp`, que Linux ne définit pas.
-workdir = "$TMPDIR/trysquare/campaign"
-
-# Valeurs de repli utilisées seulement quand un scénario se tait. Elles
-# conditionnent le nombre de reprises et donc toutes les colonnes de coût, si
-# bien qu'elles sont écrites dans `state.json` et affichées dans l'en-tête de la
-# synthèse quelle que soit leur origine.
-concurrency = 5
-timeout = 900
-attempts = 3
-
-# Constantes de méthode plutôt que variables d'expérience : les changer change la
-# façon de tirer une conclusion, pas ce qui est mesuré.
-draws = 10000
-seed = 20260729
