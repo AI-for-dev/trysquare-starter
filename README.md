@@ -57,15 +57,23 @@ is what makes a measurement repeatable: the scenario pins the measured repo by a
 pins trysquare itself, and a harness that does not pin itself measures the operator. Version the
 lock file.
 
-trysquare is published on TestPyPI and its dependencies on PyPI. `pyproject.toml` declares the
-named index as `explicit`, so uv only looks there for the packages that name it as their source;
-the others come from PyPI, and TestPyPI cannot silently supply a namesake dependency.
+trysquare is published on TestPyPI while its release path is what is being tried out, and its
+dependencies come from PyPI. An install therefore has to reach both indexes. `pyproject.toml`
+declares the named index as `explicit`, so uv only looks at TestPyPI for the package that names
+it as its source; everything else comes from PyPI, and TestPyPI cannot silently supply a namesake
+dependency. Outside uv, the same thing is
+`pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ trysquare`.
 
-Check that it is there:
+There is no `--version` flag. What checks the install, and the wiring of the experiment with it,
+is `validate`: it loads the scenario, resolves the repository, checks that every path it
+references exists, and spends no token.
 
 ```bash
-uv run trysquare --version
+uv run trysquare validate scenarios/issue1-context.toml
 ```
+
+It ends on `ok: nothing this scenario references is missing`, and notes it when `pi` is absent
+from the `PATH`, since a run would then refuse.
 
 ## Running the matrix
 
@@ -85,21 +93,27 @@ see the spread; the number of repetitions goes into the name of the output direc
 be confused with the real matrix. The third runs the matrix as the scenario declares it, 20
 repetitions per configuration.
 
-`trysquare.toml` puts the throwaway clones under `$TMPDIR`, which Linux does not always define.
-Export it first if your shell has no value for it, otherwise the path starts with an empty string
-and the clones land at the root of the repository:
+Clones and sessions live under `$TMPDIR/trysquare`, and trysquare falls back to the system
+temporary directory when the shell defines no `$TMPDIR`. Nothing to set, and nothing durable to
+clean up: the archive under `results/` keeps sources, and `replay` rebuilds a tree from a tag and
+a diff when one is needed.
+
+The subcommands that spend nothing take the same form. `render` and `replay` read the scenario,
+not only the output directory, because that is where the metrics and the verdict are declared:
 
 ```bash
-export TMPDIR="${TMPDIR:-/tmp}"
-```
-
-The subcommands that spend nothing take the same form:
-
-```bash
-uv run trysquare render results/issue1-context_…
+uv run trysquare render scenarios/issue1-context.toml --output results
 uv run trysquare replay results/issue1-context_… --scenario scenarios/issue1-context.toml --rescore
 uv run trysquare compare results/… results/…
 ```
+
+### Why there is a `trysquare.toml`
+
+A scenario names a repository by a logical name, `repo = "neon"`, and only a config file says
+what that name points at on this machine. trysquare looks for `trysquare.toml` by walking up from
+the scenario, so this one covers the whole directory. Two tables are all it holds, `[repos]` and
+`[harness]`; everything else it could carry, from `workdir` to `concurrency`, already has the same
+value built into the tool.
 
 ## Where to change the model and the concurrency
 
@@ -131,12 +145,12 @@ attempts = 5
 ```
 
 `concurrency` is how many runs trysquare launches at the same time. Lower it if your provider rate
-limits you, or if the machine cannot take it. `--repetitions` on the command line overrides
-`repetitions` for one run; the other three are read from the file.
+limits you, or if the machine cannot take it. `run` takes `--repetitions`, `--concurrency` and
+`--timeout` as overrides for one run, and records them, so trying a lower concurrency does not
+mean editing the scenario; `attempts` is read from the file only.
 
-`trysquare.toml` also carries a `concurrency` under `[defaults]`, but it is only a fallback used
-when a scenario says nothing. This scenario says something, so the value that runs is the one
-above.
+A scenario that said nothing here would fall back to the tool's own values, 5 and 900 and 3. This
+one says something, so the values that run are the ones above.
 
 ## The cost
 
@@ -148,7 +162,7 @@ them. Start with `--dry-run`, which spends nothing, then with `--repetitions 3`.
 ```
 trysquare-starter/
   pyproject.toml     where trysquare comes from, and nothing else
-  trysquare.toml     machine paths: where NEON is, where the throwaway clones live
+  trysquare.toml     what the logical names `neon` and `websearch` point at, and nothing else
   scenarios/         the experiment, in one self contained TOML file
   hypotheses/        what is predicted, written before measuring
   materials/         prompts, AGENTS.md, system prompt, skill, probe

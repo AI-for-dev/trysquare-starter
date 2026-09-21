@@ -1,39 +1,27 @@
 # Machine paths of the workbench, and nothing else.
 #
-# This file entirely replaces environment variables. An environment variable is an invisible
-# inheritance: whoever reads a scenario does not see it, the archive does not record it, and the
-# value that actually ran is the one the shell happened to contain.
+# This file exists for one reason: a scenario names a repository by a logical name, and only a
+# config file can say what that name points at on this machine. `scenarios/issue1-context.toml`
+# writes `repo = "neon"` and a harness brick writes `repo = "websearch"`, so without these two
+# tables a run refuses before it starts.
+#
+# Everything else trysquare would accept here is left out on purpose, because the values this
+# experiment wants are already the built-in ones: `workdir` defaults to `$TMPDIR/trysquare` and
+# falls back to the system temporary directory when `$TMPDIR` is unset, `concurrency` to 5,
+# `timeout` to 900, `attempts` to 3, `draws` to 10000 and `seed` to 20260729. The scenario sets
+# its own protocol anyway, so a `[defaults]` table here would only restate the tool.
 #
 # HARD RULE, checked at load time: this file can only provide **machine paths and fallback
-# values**. Writing `provider`, `model`, `thinking`, `etalon` or `repetitions` in [defaults] raises
-# an error. Those keys decide what is measured, so they are mandatory in the scenario, otherwise
-# the same file would measure something else on another machine.
+# values**. Writing `provider`, `model`, `thinking`, `etalon` or `repetitions` in [defaults]
+# raises an error. Those keys decide what is measured, so they are mandatory in the scenario,
+# otherwise the same file would measure something else on another machine.
 
-# Measurable repositories, by logical name. A scenario writes `repo = "neon"`. A local path works
-# too, relative to this file; the URL saves the trainee from cloning NEON himself, at the price of
-# network access to GitHub.
+# Measurable repositories, by logical name. A local path works too, relative to this file; the
+# URL saves the trainee from cloning NEON himself, at the price of network access to GitHub. A
+# URL is cloned once, at the etalon tag, and every run then clones from that local copy.
 [repos]
 neon = "https://github.com/AI-for-dev/neon.git"
 
 # The `extension` brick of the scenario cites this repository by its logical name.
 [harness]
 websearch = "https://github.com/sebaxzero/pi-safe-search"
-
-[defaults]
-# The clones live in the system temporary directory, which macOS purges on restart. That is
-# intended: the durable archive keeps nothing but sources, and `replay` rebuilds a tree from a tag
-# and a diff when one is needed. Linux does not always define `$TMPDIR`: export it before running,
-# otherwise the path starts with an empty string.
-workdir = "$TMPDIR/trysquare/campaign"
-
-# Fallback values used only when a scenario says nothing. They condition the number of retries and
-# therefore every cost column, so they are written in `state.json` and shown in the header of the
-# synthesis whatever their origin.
-concurrency = 5
-timeout = 900
-attempts = 3
-
-# Constants of method rather than variables of the experiment: changing them changes how a
-# conclusion is drawn, not what is measured.
-draws = 10000
-seed = 20260729
