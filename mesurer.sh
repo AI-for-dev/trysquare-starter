@@ -48,8 +48,8 @@ cd "$ICI"
 trysquare run "scenarios/$SCENARIO.toml" --output "$SORTIE" "$@"
 
 # Le journal n'est écrit que pour une mesure qui a réellement dépensé. Il garde
-# la révision de ce dépôt et la version de trysquare : le scénario épingle le
-# dépôt mesuré par un tag, et ces deux lignes sont ce qui épingle le reste.
+# la révision de ce dépôt et la version de trysquare, que le scénario ne dit pas :
+# lui n'épingle que le dépôt mesuré, par son tag.
 for arg in "$@"; do
   [ "$arg" = "--dry-run" ] && exit 0
 done

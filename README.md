@@ -21,8 +21,9 @@ matériau de l'expérience, c'est-à-dire le scénario, les briques, l'hypothès
 `setup.sh` vérifie `git`, `node` et `uv`, propose d'installer `pi` avec
 l'installateur de [pi.dev](https://pi.dev) s'il manque, puis lance `uv sync`.
 Ce dernier crée `.venv` et écrit `uv.lock`, qui épingle trysquare et ses
-dépendances : trysquare épingle le dépôt mesuré par un tag, et ce verrou est ce
-qui épingle trysquare lui-même. `./setup.sh --check` ne modifie rien et dit
+dépendances. Le scénario épingle déjà le dépôt mesuré par un tag ; ce verrou
+épingle l'outil qui le mesure, sans quoi deux machines rendraient deux matrices
+sans qu'on sache laquelle a changé. `./setup.sh --check` ne modifie rien et dit
 seulement ce qui manque.
 
 `mesurer.sh` met `.venv/bin` en tête du `PATH`, donne à `$TMPDIR` un repli
@@ -48,9 +49,9 @@ dépensent rien passent telles quelles :
 | un fournisseur de modèles | déclaré dans `~/.pi/agent/models.json`, voir [la documentation de pi](https://pi.dev/docs/latest/providers) |
 | un accès réseau | GitHub pour NÉON et l'extension, TestPyPI et PyPI pour l'installation, le fournisseur pour les appels |
 
-Le scénario déclare son fournisseur et son modèle dans sa table `[agent]`, et
-c'est délibéré : ce sont les deux valeurs qui décident de ce qui est mesuré,
-donc elles sont écrites dans le fichier plutôt qu'héritées du shell. Si vous
+Le scénario déclare son fournisseur et son modèle dans sa table `[agent]`,
+parce que ce sont les deux valeurs qui décident de ce qui est mesuré et qu'un
+héritage depuis le shell les rendrait invisibles au lecteur du fichier. Si vous
 n'avez pas ce fournisseur, changez ces deux lignes avant de lancer. Les tables
 publiées dans le cours ont été mesurées sur `ilaas` et `gemma-4-31b`, contre le
 commit `d62ccd1f` de NÉON.
@@ -92,8 +93,9 @@ Chacune des autres ajoute ou retire une pièce, et le fichier
 Le critère est `rebond_briques`, et c'est une sonde plutôt qu'un motif dans le
 diff : `briques/sonde-fournie/sonde.test.js` pose une balle déjà en recouvrement
 avec une brique, appelle `frame()`, et regarde quelle composante de vitesse
-s'inverse. La moitié dure de l'issue #1 est un comportement, et un comportement
-s'exécute au lieu de se reconnaître.
+s'inverse. Ce que l'issue #1 demande est un comportement, que la sonde exécute,
+là où un motif cherché dans le diff dépendrait de la façon dont l'agent a écrit
+sa correction.
 
 Le validateur rend onze métriques, que le scénario déclare une à une. Une
 métrique déclarée mais absente du validateur ne coûte pas la matrice : elle fait

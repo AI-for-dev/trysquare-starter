@@ -35,13 +35,14 @@ done
 
 manquant=0
 note() { printf '  %s\n' "$*"; }
+ligne() { printf '  %-9s %s\n' "$1" "$2"; }
 absent() { printf '  manquant : %s\n' "$*"; manquant=1; }
 
 echo "Prérequis"
 
 for outil in git uv; do
   if command -v "$outil" >/dev/null 2>&1; then
-    note "$outil       $(command -v "$outil")"
+    ligne "$outil" "$(command -v "$outil")"
   else
     absent "$outil"
   fi
@@ -53,7 +54,7 @@ if command -v node >/dev/null 2>&1; then
   node_version="$(node --version)"
   node_major="${node_version#v}"; node_major="${node_major%%.*}"
   if [ "$node_major" -ge "$NODE_MIN" ]; then
-    note "node      $node_version"
+    ligne node "$node_version"
   else
     absent "node >= $NODE_MIN (trouvé $node_version)"
   fi
@@ -62,7 +63,7 @@ else
 fi
 
 if command -v pi >/dev/null 2>&1; then
-  note "pi        $(pi --version 2>/dev/null || echo 'version illisible')"
+  ligne pi "$(pi --version 2>/dev/null || echo 'version illisible')"
 elif [ "$CHECK" = 1 ] || [ "$SANS_PI" = 1 ]; then
   absent "pi (voir https://pi.dev)"
 else
@@ -106,7 +107,7 @@ echo "Environnement Python"
 # trysquare vient de TestPyPI et ses dépendances de PyPI ; `pyproject.toml` porte
 # cette règle, et `uv.lock` garde la résolution exacte d'une machine à l'autre.
 ( cd "$ICI" && uv sync )
-note "trysquare $("$ICI/.venv/bin/trysquare" --version 2>/dev/null || echo 'version illisible')"
+ligne trysquare "$("$ICI/.venv/bin/trysquare" --version 2>/dev/null || echo 'version illisible')"
 
 echo
 echo "Fournisseur de modèles"

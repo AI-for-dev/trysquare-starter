@@ -12,11 +12,11 @@ sont gardées ici, parce qu'une ancre qui ne mord plus rend une sonde non corrig
 exporté se lirait alors comme une correction absente, sur toute une campagne.
 
 Ce qui ne l'est pas encore : la sonde et ses fixtures, `tests_ajoutes`, `in_scope`. Ils
-étaient couverts dans `../../trysquare-campaign-old/validateurs/test_issue1.py`, contre
-des arbres réels, et leur reprise attend celle des fixtures.
+étaient couverts par une version antérieure de ces tests, contre des arbres réels, et leur
+reprise attend celle des fixtures.
 
     cd validateurs
-    uv run --no-project --with ../../../../trysquare python -m unittest test_issue1 -v
+    uv run --project .. python -m unittest test_issue1 -v
 """
 
 from __future__ import annotations

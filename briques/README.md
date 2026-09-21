@@ -2,9 +2,9 @@
 
 Ce qu'un scénario injecte dans le clone ou passe à l'agent, un fichier par pièce.
 
-**Le matériau de tâche n'est pas de la documentation.** Les prompts, l'`AGENTS.md`
-et le prompt système minimal sont des entrées expérimentales : changer un mot
-change la mesure et périme les tables déjà publiées. Si une formulation doit
+Ces fichiers ne sont pas de la documentation. Les prompts, l'`AGENTS.md` et le
+prompt système minimal sont des entrées expérimentales : changer un mot change
+la mesure et périme les tables déjà publiées. Si une formulation doit
 évoluer, créez une brique à côté et déclarez-la comme une cellule de plus, plutôt
 que de réécrire celle-ci.
 
@@ -23,7 +23,7 @@ détaille dans le dépôt mesuré. Cette retenue est le sujet de la cellule : ce
 est mesuré est si pointer un document écrit suffit à ce qu'il soit lu, et non si
 un agent sait appliquer un indice qu'on vient de lui tendre.
 
-La sonde est **un seul fichier pour deux emplois** : `validateurs/issue1.py` la
+La sonde est un seul fichier pour deux emplois : `validateurs/issue1.py` la
 dépose dans une copie de l'arbre mesuré pour noter toutes les cellules, et la
 brique `kind = "files"` du scénario la commite dans le clone des deux cellules
 `add_tests` avant que l'agent démarre. La seule ligne qui sépare les deux usages
