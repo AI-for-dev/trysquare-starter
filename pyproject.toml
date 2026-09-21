@@ -1,0 +1,24 @@
+# Le seul rôle de ce fichier est de dire d'où vient trysquare.
+#
+# `uv sync` crée `.venv` et écrit `uv.lock`, qui épingle trysquare et toutes ses
+# dépendances transitives. Versionner ce verrou est ce qui rend une mesure
+# refaisable : trysquare épingle le dépôt mesuré par un tag, mais rien n'épingle
+# trysquare lui-même, et un harnais qui ne s'épingle pas mesure l'opérateur.
+[project]
+name = "trysquare-starter"
+version = "0"
+description = "Environnement jetable pour rejouer le scénario issue1-contexte"
+requires-python = ">=3.12"
+dependencies = ["trysquare"]
+
+# trysquare est publié sur TestPyPI, ses dépendances sur PyPI. L'index nommé est
+# déclaré `explicit`, donc uv n'y cherche que les paquets qui le désignent en
+# source : les autres viennent de PyPI, et TestPyPI ne peut pas fournir en
+# silence une dépendance homonyme.
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+explicit = true
+
+[tool.uv.sources]
+trysquare = { index = "testpypi" }
