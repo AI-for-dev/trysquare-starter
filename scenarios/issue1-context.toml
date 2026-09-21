@@ -33,15 +33,9 @@ etalon = "etalon-v1"
 prompt = "../materials/issue1-simple-prompt.md"
 
 [agent]
-# provider = "opencode-go"
-# model = "qwen3.8-flash"
-# model = "deepseek-v4-flash"
+provider = "ilaas"
+model = "gemma-4-31b"
 
-provider = "test-ilaas"
-model = "gemma-4-31b_alt"
-
-# provider = "GRICAD"
-# model = "ARES/Qwen3.8-27B"
 # Always declared, never inherited. The operator's `defaultThinkingLevel` once made this cell
 # identical to the base in every published matrix.
 thinking = "off"
