@@ -1,42 +1,39 @@
-# Chemins machine de l'établi, et rien d'autre.
+# Machine paths of the workbench, and nothing else.
 #
-# Ce fichier remplace entièrement les variables d'environnement. Une variable
-# d'environnement est un héritage invisible : le lecteur d'un scénario ne la voit
-# pas, l'archive ne l'enregistre pas, et la valeur qui a réellement tourné est
-# celle que le shell contenait par hasard.
+# This file entirely replaces environment variables. An environment variable is an invisible
+# inheritance: whoever reads a scenario does not see it, the archive does not record it, and the
+# value that actually ran is the one the shell happened to contain.
 #
-# RÈGLE DURE, vérifiée au chargement : ce fichier ne peut fournir que des
-# **chemins machine et des valeurs de repli**. Écrire `provider`, `model`,
-# `thinking`, `etalon` ou `repetitions` dans [defaults] lève une erreur. Ces clés
-# décident de ce qui est mesuré, donc elles sont obligatoires dans le scénario -
-# sinon le même fichier mesurerait autre chose sur une autre machine.
+# HARD RULE, checked at load time: this file can only provide **machine paths and fallback
+# values**. Writing `provider`, `model`, `thinking`, `etalon` or `repetitions` in [defaults] raises
+# an error. Those keys decide what is measured, so they are mandatory in the scenario, otherwise
+# the same file would measure something else on another machine.
 
-# Dépôts mesurables, par nom logique. Un scénario écrit `repo = "neon"`.
-# Un chemin local convient aussi, relatif à ce fichier ; l'URL évite au stagiaire
-# d'avoir à cloner NÉON lui-même, au prix d'un accès réseau à GitHub.
+# Measurable repositories, by logical name. A scenario writes `repo = "neon"`. A local path works
+# too, relative to this file; the URL saves the trainee from cloning NEON himself, at the price of
+# network access to GitHub.
 [repos]
 neon = "https://github.com/AI-for-dev/neon.git"
 
-# La brique `extension` du scénario cite ce dépôt par son nom logique.
+# The `extension` brick of the scenario cites this repository by its logical name.
 [harness]
 websearch = "https://github.com/sebaxzero/pi-safe-search"
 
 [defaults]
-# Les clones vivent dans le répertoire temporaire du système, que macOS purge au
-# redémarrage. C'est voulu : l'archive durable ne garde que des sources, et
-# `replay` reconstitue un arbre depuis un tag et un diff quand il en faut un.
-# `mesurer.sh` donne à `$TMPDIR` un repli `/tmp`, que Linux ne définit pas.
+# The clones live in the system temporary directory, which macOS purges on restart. That is
+# intended: the durable archive keeps nothing but sources, and `replay` rebuilds a tree from a tag
+# and a diff when one is needed. Linux does not always define `$TMPDIR`: export it before running,
+# otherwise the path starts with an empty string.
 workdir = "$TMPDIR/trysquare/campaign"
 
-# Valeurs de repli utilisées seulement quand un scénario se tait. Elles
-# conditionnent le nombre de reprises et donc toutes les colonnes de coût, si
-# bien qu'elles sont écrites dans `state.json` et affichées dans l'en-tête de la
-# synthèse quelle que soit leur origine.
+# Fallback values used only when a scenario says nothing. They condition the number of retries and
+# therefore every cost column, so they are written in `state.json` and shown in the header of the
+# synthesis whatever their origin.
 concurrency = 5
 timeout = 900
 attempts = 3
 
-# Constantes de méthode plutôt que variables d'expérience : les changer change la
-# façon de tirer une conclusion, pas ce qui est mesuré.
+# Constants of method rather than variables of the experiment: changing them changes how a
+# conclusion is drawn, not what is measured.
 draws = 10000
 seed = 20260729

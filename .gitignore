@@ -3,6 +3,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# Les matrices produites en salle. Le dépôt porte de quoi les refabriquer, pas
-# les résultats eux-mêmes ; archivez la vôtre ailleurs si elle doit servir.
+# The matrices produced in the classroom. The repository carries what is needed to make them
+# again, not the results themselves; archive yours elsewhere if it has to serve.
 results/
