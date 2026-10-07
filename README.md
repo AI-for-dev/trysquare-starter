@@ -2,7 +2,8 @@
 
 Everything needed to replay one experiment of the course, `issue1-context`, in an environment you
 throw away afterwards: the context levers of module 2.1 measured against the bounce of issue #1 of
-NEON, nine configurations, one lever at a time.
+NEON, eleven configurations: one lever at a time, two of them again without the project's history,
+then four stacks.
 
 The repository does not contain the measuring tool. [trysquare](https://github.com/AI-for-dev/trysquare)
 is a Python package installed in a local venv; what lives here is the material of the experiment,
@@ -17,7 +18,8 @@ measuring, and the validator that scores.
 | `node` >= 20 | the scoring probe is a `node:test` suite, run with `--test-reporter` |
 | `git` | trysquare clones NEON on its tag, and the validator reads its reference there |
 | `pi` | the harness being measured, installed from [pi.dev](https://pi.dev) |
-| a model provider | declared in `~/.pi/agent/models.json`, see [the pi documentation](https://pi.dev/docs/latest/providers) |
+| `docker` | each run executes in its own container, from the image the scenario names |
+| a model provider | declared in `models.json` at the root of this repository, its key in `.env` |
 | network access | GitHub for NEON and the extension, TestPyPI and PyPI for the installation, the provider for the calls |
 
 ### Install pi
@@ -32,11 +34,19 @@ pi --version
 If `pi` is not on the `PATH` afterwards, open a new shell or add its directory to the `PATH`
 yourself.
 
-pi then needs a provider and an API key, which cannot come from this repository: the key is
-personal, and `~/.pi/agent/models.json` is the file pi reads. The shape of that file is described
-in [the pi documentation](https://pi.dev/docs/latest/providers). The scenario declares the provider
-and the model it expects, so read `[agent]` in `scenarios/issue1-context.toml` and make sure that
-provider is the one your `models.json` declares, or change those two lines.
+pi then needs a provider and an API key. The runs do not read `~/.pi/agent/models.json`: the
+containers get their providers from `models.json` at the root of this repository, which has the
+shape described in [the pi documentation](https://pi.dev/docs/latest/providers) and names each key
+as a variable, such as `$GRICAD_API_KEY`. The key itself is personal, so it cannot come from this
+repository: write it in a `.env` file next to `models.json`.
+
+```bash
+GRICAD_API_KEY=...
+```
+
+The scenario declares the provider and the model it expects, so read `[agent]` in
+`scenarios/issue1-context.toml` and make sure `models.json` declares that provider, or change those
+two lines.
 
 ### Install trysquare with uv
 
@@ -52,7 +62,9 @@ Then, from the root of this repository:
 uv sync
 ```
 
-This creates `.venv`, installs trysquare and its dependencies, and writes `uv.lock`. That lock file
+This creates `.venv`, installs trysquare and its dependencies, and writes `uv.lock`. The scenario
+needs trysquare 0.8.0 or later, the first version that reads `[presets]` and the `exclude` and
+`include` keys of `[axes]`, and `pyproject.toml` says so. That lock file
 is what makes a measurement repeatable: the scenario pins the measured repo by a tag, but nothing
 pins trysquare itself, and a harness that does not pin itself measures the operator. Version the
 lock file.
@@ -90,7 +102,7 @@ uv run trysquare run scenarios/issue1-context.toml --output results
 
 The first one prints the full plan without spending anything. The second is a smoke pass, enough to
 see the spread; the number of repetitions goes into the name of the output directory, so it cannot
-be confused with the real matrix. The third runs the matrix as the scenario declares it, 20
+be confused with the real matrix. The third runs the matrix as the scenario declares it, 40
 repetitions per configuration.
 
 Clones and sessions live under `$TMPDIR/trysquare`, and trysquare falls back to the system
@@ -111,9 +123,23 @@ uv run trysquare compare results/… results/…
 
 A scenario names a repository by a logical name, `repo = "neon"`, and only a config file says
 what that name points at on this machine. trysquare looks for `trysquare.toml` by walking up from
-the scenario, so this one covers the whole directory. Two tables are all it holds, `[repos]` and
-`[harness]`; everything else it could carry, from `workdir` to `concurrency`, already has the same
-value built into the tool.
+the scenario, so this one covers the whole directory. It holds three tables. `[repos]` and
+`[harness]` resolve the logical names. `[isolation]` runs each agent in a docker container,
+bounded to one CPU and 4 GB, and names the two files the containers get their provider from:
+`models.json` declares the providers and the models, and `.env` holds the keys. The keys never
+enter a container: trysquare hands it a placeholder and swaps in the real key on a relay running
+on the host. `.env` is personal and stays out of git.
+
+The image is built once, from the `image/Dockerfile` of the trysquare repository:
+
+```bash
+docker build -t trysquare-agent image/
+```
+
+The scenario names it in `[agent] image`, because the tools in the container are the agent's tools.
+
+Everything else `trysquare.toml` could carry, from `workdir` to `concurrency`, already has the
+value this experiment wants built into the tool.
 
 ## Where to change the model and the concurrency
 
@@ -138,14 +164,15 @@ The number of concurrent runs is in the `[protocol]` table, with the rest of the
 
 ```toml
 [protocol]
-repetitions = 20
-concurrency = 30
+repetitions = 40
+concurrency = 60
 timeout = 1800
 attempts = 5
 ```
 
 `concurrency` is how many runs trysquare launches at the same time. Lower it if your provider rate
-limits you, or if the machine cannot take it. `run` takes `--repetitions`, `--concurrency` and
+limits you, or if the machine cannot take it: each container is held to one CPU and 4 GB, so 60
+of them need 60 CPUs and 240 GB. `run` takes `--repetitions`, `--concurrency` and
 `--timeout` as overrides for one run, and records them, so trying a lower concurrency does not
 mean editing the scenario; `attempts` is read from the file only.
 
@@ -154,15 +181,18 @@ one says something, so the values that run are the ones above.
 
 ## The cost
 
-Twenty repetitions over nine configurations take two to three hours and the tokens that go with
-them. Start with `--dry-run`, which spends nothing, then with `--repetitions 3`.
+Forty repetitions over eleven configurations make 440 runs. At 60 at a time with a 1800 s timeout,
+`--dry-run` bounds the matrix at four hours, plus the tokens that go with them. Start with
+`--dry-run`, which spends nothing, then with `--repetitions 3`.
 
 ## Layout
 
 ```
 trysquare-starter/
   pyproject.toml     where trysquare comes from, and nothing else
-  trysquare.toml     what the logical names `neon` and `websearch` point at, and nothing else
+  trysquare.toml     what the logical names point at, and how each run is isolated
+  models.json        the providers and models the containers can reach
+  .env               your provider keys, not versioned
   scenarios/         the experiment, in one self contained TOML file
   hypotheses/        what is predicted, written before measuring
   materials/         prompts, AGENTS.md, system prompt, skill, probe
@@ -175,10 +205,12 @@ piece.
 
 ## The experiment
 
-Nine configurations, including a `nothing` base that declares no delta and reproduces what somebody
-does on day one: the careless request, no rules file, no reasoning budget, the agent's own system
-prompt. Each of the others adds or removes one piece, and `scenarios/issue1-context.toml` says in a
-comment why each one is there.
+Eleven configurations, including a `nothing / no` base that declares no delta and reproduces what
+somebody does on day one: the careless request, no rules file, no reasoning budget, the agent's own
+system prompt, the project's history in reach. Each lever is declared once as a preset. A grid
+crosses the five single levers with `blind`, which hides the git history and deletes `ISSUES.md`;
+`exclude` keeps `blind` only for `thinking` and `well_crafted`, and `include` adds the four stacks.
+`scenarios/issue1-context.toml` says in a comment why each one is there.
 
 The criterion is `bounce_bricks`, and it is a probe rather than a pattern in the diff:
 `materials/provided-probe/probe.test.js` places a ball already overlapping a brick, calls `frame()`,

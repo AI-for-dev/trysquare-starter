@@ -6,3 +6,6 @@ __pycache__/
 # The matrices produced in the classroom. The repository carries what is needed to make them
 # again, not the results themselves; archive yours elsewhere if it has to serve.
 results/
+
+# The provider keys that trysquare relays to the containers. Personal, never versioned.
+.env

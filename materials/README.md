@@ -15,6 +15,7 @@ rather than rewriting this one.
 | `AGENTS.md` | a project convention, as a permanent context file |
 | `SYSTEM-minimal.md` | the agent's system prompt reduced to three lines |
 | `skills/playtest/` | a skill: play the game before fixing it, and look for the edge cases |
+| `remove-issues-md.sh` | the `setup` script of the `blind` cells: deletes `ISSUES.md` from the clone |
 | `provided-probe/probe.test.js` | the scoring probe, dropped in the tree of the two `add_tests` cells |
 
 The well crafted prompt does not copy out the bounce mechanism, although `ISSUES.md` details it in

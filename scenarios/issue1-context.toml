@@ -1,8 +1,9 @@
 # The context levers of module 2.1, measured on issue #1 instead of issue #2.
 #
-# The bench took each lever one at a time against a base, and that plan is reproduced here as
-# named variants rather than as a grid: this is not a cartesian product, and writing it as one
-# would invent eight cells nobody wants to read.
+# The bench took each lever one at a time against a base, then a few stacks. That plan is
+# written here as a grid of levers against `blind`, with `exclude` removing the combinations
+# nobody wants to read, and `include` adding the stacks: this is not a full cartesian product,
+# and writing it as one would invent cells nobody wants to read.
 #
 # The task changed for a reason. The hard half of issue #2 has no mechanical form - the bench
 # approached it with a pattern in the diff, got it wrong twice, and concluded that a judge was
@@ -33,91 +34,107 @@ etalon = "etalon-v1"
 prompt = "../materials/issue1-simple-prompt.md"
 
 [agent]
-provider = "ilaas"
-model = "gemma-4-31b"
+provider = "GRICAD"
+model = "ARES/DeepSeek-V4.1-Flash"
+# provider = "ilaas"
+# model = "gemma-4-31b"
 
 # Always declared, never inherited. The operator's `defaultThinkingLevel` once made this cell
 # identical to the base in every published matrix.
 thinking = "off"
 
+# The agent's tools belong to the experiment, not to the machine, so the image is declared here.
+# Built once from trysquare's `image/Dockerfile`: `docker build -t trysquare-agent image/`.
+image = "trysquare-agent"
+
 [protocol]
 # Declared in advance, and never rerun "just to see". Ten for one session; the smoke pass is
 # `--repetitions 2`, a value stamped into the name of the output directory so that it is not
 # mistaken for the real matrix.
-repetitions = 20
-concurrency = 30
+repetitions = 40
+concurrency = 60
 timeout = 1800
 attempts = 5
 
-# --- Cells: one lever at a time, then the stack ----------------------------
+# --- Levers ----------------------------------------------------------------
 #
-# `nothing` is the base and declares no delta, which makes it a cell of the matrix rather than a
-# seventh thing placed next to it.
+# Each lever is declared once. A cell of the grid that names one takes its lines, and a cell
+# of `include` is named after the levers it takes, in the order they are declared here: a name
+# cannot promise a lever the cell does not have.
 
-[variants.nothing]
-# What somebody does on day one: the vague request, no rules file, no reasoning budget, the
-# agent's own system prompt.
-
-[variants."+thinking"]
-thinking = "low"
-
-[variants."+agents"]
+[presets]
+thinking = { thinking = "high" }
 # The project convention, as a permanent context file. A control rather than a treatment:
 # `AGENTS.md` says nothing about this ticket, so if it moves the criterion, then the criterion
 # measures diligence and not the lever the line names.
-context = "../materials/AGENTS.md"
-
-[variants."+well_crafted"]
-# Scope, stopping criterion, and a pointer to issue #1 of `ISSUES.md`. It does *not* repeat the
-# per-face bounce mechanism, although the ticket in the repo details it. That restraint is the
-# whole subject: see `../materials/README.md`.
-prompt = "../materials/issue1-well-crafted-prompt.md"
-
-[variants."-system_prompt"]
+agents = { context = "../materials/AGENTS.md" }
+well_crafted = { prompt = "../materials/issue1-well-crafted-prompt.md" }
+# A skill is loaded through its brick, and the prompt invokes it. The bricks of several levers
+# add up: a cell taking `skill` and `add_tests` loads all three.
+skill = { prompt = "../materials/issue1-simple-prompt-with-skill.md", harness = ["skills-playtest", "extension"] }
+add_tests = { harness = ["provided-probe"] }
+# No git history, and `ISSUES.md` removed before the agent starts. The history goes after the
+# script, so nothing it deleted can be read back with `git show`.
+blind = { history = false, setup = "../materials/remove-issues-md.sh" }
 # The agent's system prompt replaced by three lines. This is not what `--system-prompt` does: the
 # harness writes `.pi/SYSTEM.md` into the clone, which replaces it entirely, and context files and
 # skills keep being added on top.
-system = "../materials/SYSTEM-minimal.md"
+system_prompt = { system = "../materials/SYSTEM-minimal.md" }
 
-[variants."+agents+well_crafted"]
-# Every lever that pointed in the right direction, together. The bench called this cell
-# `flash (well crafted)`, and it is one corner of a 2x2; the other two are in
-# `issue1-context-pro.toml`, because the model is a constant of the scenario.
-prompt = "../materials/issue1-well-crafted-prompt.md"
-context = "../materials/AGENTS.md"
-thinking = "low"
-
-[variants."+agents+skill"]
-prompt = "../materials/issue1-simple-prompt-with-skill.md"
-context = "../materials/AGENTS.md"
-thinking = "low"
-harness = ["skills-playtest", "extension"]
-
-# The cell that asks the opposite question to all the others. Elsewhere context is given and we
-# watch whether the agent finds the case the request does not name; here he is given **the test
-# that judges him**, red, in the tree, and we watch whether he corrects himself.
+# --- Cells: one lever at a time, with and without the history, then the stacks ----
 #
-# It is read against `well crafted stack`, the only cell it differs from by this brick alone, and
-# never against `nothing`, which it differs from by four things. The verdict column of the matrix
-# stays taken against `nothing` for every cell; here it is `compare`, or the table, that gives the
-# useful gap.
-#
-# The provided probe is the very file that scores, dropped as is. This cell therefore also reads
-# its two latent groups - tunneling and paddle - which issue #1 does not command, and it may make
-# them pass where the other cells never see them. Those two columns therefore do not compare from
-# one cell to the next; the first four do, and that is where the lever can be read.
-[variants."+agents+add_tests+well_crafted"]
-prompt = "../materials/issue1-well-crafted-prompt.md"
-context = "../materials/AGENTS.md"
-thinking = "low"
-harness = ["provided-probe"]
+# `nothing / no` is the base: the vague request, no rules file, no reasoning budget, the agent's
+# own system prompt, the project's history in reach. What somebody does on day one.
 
-[variants."+agents+add_tests+skill"]
-prompt = "../materials/issue1-simple-prompt-with-skill.md"
-context = "../materials/AGENTS.md"
-thinking = "low"
-harness = ["skills-playtest", "extension", "provided-probe"]
+[axes]
+lever = ["nothing", "thinking", "agents", "well_crafted", "system_prompt"]
+blind = ["no", "blind"]
+exclude = [
+  { lever = "nothing", blind = "blind" },
+  { lever = "agents", blind = "blind" },
+  { lever = "system_prompt", blind = "blind" },
+]
+include = [
+  # Every lever that pointed in the right direction, together. The bench called this cell
+  # `flash (well crafted)`, and it is one corner of a 2x2; the other two are in
+  # `issue1-context-pro.toml`, because the model is a constant of the scenario.
+  [
+    "agents",
+    "well_crafted",
+    "thinking",
+  ],
+  [
+    "agents",
+    "skill",
+    "thinking",
+  ],
 
+  # The cells that ask the opposite question to all the others. Elsewhere context is given and
+  # we watch whether the agent finds the case the request does not name; here he is given **the
+  # test that judges him**, red, in the tree, and we watch whether he corrects himself.
+  #
+  # Each is read against the same stack without `add_tests`, the only cell it differs from by
+  # this brick alone, and never against the base, which it differs from by four things. The
+  # verdict column stays taken against the base for every cell; here it is `compare`, or the
+  # table, that gives the useful gap.
+  #
+  # The provided probe is the very file that scores, dropped as is. These cells therefore also
+  # read its two latent groups - tunneling and paddle - which issue #1 does not command, and may
+  # make them pass where the other cells never see them. Those two columns do not compare from
+  # one cell to the next; the first four do, and that is where the lever can be read.
+  [
+    "agents",
+    "add_tests",
+    "well_crafted",
+    "thinking",
+  ],
+  [
+    "agents",
+    "add_tests",
+    "skill",
+    "thinking",
+  ],
+]
 
 # The `+rtk` cell of the bench is deliberately absent. `pi-rtk-optimizer` is installed as a package
 # under `~/.pi/agent/extensions`, without a git tag to pin, and a harness brick that floats while
@@ -128,11 +145,6 @@ harness = ["skills-playtest", "extension", "provided-probe"]
 # --- Harness bricks --------------------------------------------------------
 
 # Declared once and cited by name, so that pinning lives in a single place.
-#
-# **The name `skills` is not decorative**: trysquare files the `paths` of a brick under skills if
-# and only if the brick is called `skills`, and under subagent definitions otherwise. A brick named
-# otherwise would inject this directory as an agent, load the subagent guard with it, and fail on
-# the model check - measuring, in the meantime, something other than what this line says.
 #
 # Nothing to pin here: the skill is versioned in this repository, so noting the revision of this
 # repository next to a matrix pins it. That is what the `+rtk` cell of the bench lacked, and why it
@@ -167,9 +179,6 @@ load = "extensions"
 
 # `metrics` is a contract. A run whose validator omits one of these names is invalid, rather than
 # having the missing key read as "false".
-#
-# The first seven are mechanical and taken as they are. The last four are what this scenario exists
-# to measure.
 [[validation]]
 mode = "script"
 command = "../validators/issue1.py"
@@ -181,39 +190,23 @@ metrics = [
   "suite_run",
   # process too, and the first question a cell with a skill has to settle: did the body of the
   # `SKILL.md` enter the context? pi only puts the name and the description in the system prompt,
-  # so a loaded skill is not a skill that was read.
-  #
-  # The cells of this matrix split three ways here, not two:
-  #
-  # - `+skill-tie-3` and `+probe+skill` load the brick by its name, so the agent has to go and
-  #   read the file and may not do it. That is where the column measures something: 3 out of 5 in
-  #   the matrix of 3 August.
-  # - the two `-force` cells put `/skill:tie-cases-3` in the prompt, which pi expands client side:
-  #   the body is pasted into the first message, the agent has nothing left to read, and the column
-  #   is true by construction. That is intended - it is what `-force` means - and the gap with the
-  #   previous cell is the effect being measured.
-  # - the others receive none, and the column there is **false** rather than not applicable: it is
-  #   a fact about the session, true there too. The validator says why.
+  # so a loaded skill is not a skill that was read. False rather than not applicable in the cells
+  # that receive no skill: it is a fact about the session. The validator says why.
   "skill_invoked",
   # process again, and the question a cell with a provided probe has to settle before any other:
   # is the test we gave the agent still the one we gave? Loosening the assertion until it passes
   # is the answer that costs nothing, and `bounces()` is not fooled by it - it rewrites its own
-  # copy - so this column protects nothing, it tells. **Not applicable in the other seven cells**,
-  # which receive no probe: the validator says why it is "not applicable" here where
-  # `skill_invoked` is "false".
+  # copy - so this column protects nothing, it tells. **Not applicable in the cells without
+  # `add_tests`**, which receive no probe: the validator says why it is "not applicable" here
+  # where `skill_invoked` is "false".
   "probe_intact",
   # the scope the ticket puts within reach, and its diagnosis
   "in_scope",
   "touched",
   # the edge cases issue #1 asks for, counted against the six of the etalon
   "tests_added",
-  # the probe, in six columns from a single run. A seventh played the walls of the field; it was
-  # removed, because they already bounce at the etalon and it was therefore green everywhere.
-  #
-  # **The six do not add themselves to the matrices already archived.** `results/…_n10` and
-  # `results/…_n20` were measured with eight metrics; `compare` will no longer join a matrix from
-  # before with a matrix from after, and it is right, they are not the same measurements. Rerunning
-  # the matrix is the price of the widening.
+  # the probe, in six columns from a single run. **They do not add themselves to the matrices
+  # already archived**: `compare` will not join a matrix from before with a matrix from after.
   #
   # The first four judge the correction that was asked for, from the coarsest to the finest: the
   # faces of a brick (the criterion), its corner, the exit out of the rectangle after the bounce,
@@ -222,23 +215,9 @@ metrics = [
   "bounce_corners",
   "bounce_exit",
   "bounce_neighbors",
-  # The last two are latent bugs of the repo that issue #1 does not ask anyone to fix: the
-  # tunneling of a fast ball, and three flaws of the paddle. They will be **black end to end**,
-  # which is the opposite of the flaw that got the walls column removed, and they are kept anyway:
-  # the validator says why. They enter no criterion and change no verdict.
+  # A latent bug of the repo that issue #1 does not ask anyone to fix: the tunneling of a fast
+  # ball. It enters no criterion and changes no verdict.
   "bounce_tunneling",
-  # "in_scope",
-  # "tests",
-  # "api_stable",
-  # "touched",
-  # "overflow",
-  # "issues",
-  # the criterion and its two halves: `bounce` is the floor (the ball is deflected), `per_face`
-  # the hard half (the right axis flips).
-  # "bounce",
-  # "per_face",
-  # an obedience requirement of the ticket, not the criterion: see the validator.
-  # "red_first",
 ]
 
 # --- Verdict ---------------------------------------------------------------
@@ -247,17 +226,11 @@ metrics = [
 # The hard half of the ticket, and it is for it that this task was chosen: on issue #2 the
 # equivalent column carried a star and had to be taken on trust.
 criterion = "bounce_bricks"
-reference = "nothing"
+reference = { lever = "nothing", blind = "no" }
 
-# **`tests` is deliberately not a validity condition here**, and the 2x3 matrix of trysquare is a
-# bad model on this point.
-#
-# Issue #1 asks for the edge cases "first as red tests, then green". An agent who writes the red
-# tests and stops has produced a red suite, which is a *result* for this task and not an inability
-# to judge. Filtering those runs out would remove exactly the ones the matrix talks about.
-# `delivered` stays: a run that modified no file did not work, and it passes the tests by
-# construction.
-#
-# The general rule, learned on the impact note scenario: a validity condition has to match the
-# task, and no condition is right for all of them.
+# **`tests` is deliberately not a validity condition here.** Issue #1 asks for the edge cases
+# "first as red tests, then green". An agent who writes the red tests and stops has produced a
+# red suite, which is a *result* for this task and not an inability to judge. Filtering those
+# runs out would remove exactly the ones the matrix talks about. `delivered` stays: a run that
+# modified no file did not work, and it passes the tests by construction.
 validity = ["delivered"]
