@@ -9,7 +9,7 @@ name = "trysquare-starter"
 version = "0"
 description = "Throwaway environment for replaying the issue1-context scenario"
 requires-python = ">=3.12"
-dependencies = ["trysquare"]
+dependencies = ["trysquare>=0.8.0"]
 
 # trysquare is published on TestPyPI, its dependencies on PyPI. The named index is declared
 # `explicit`, so uv only looks there for the packages that name it as their source: the others come

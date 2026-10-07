@@ -25,3 +25,14 @@ neon = "https://github.com/AI-for-dev/neon.git"
 # The `extension` brick of the scenario cites this repository by its logical name.
 [harness]
 websearch = "https://github.com/sebaxzero/pi-safe-search"
+
+# Each run executes in its own container, from the image the scenario declares in `[agent] image`.
+# The provider key never enters the container: trysquare reads it from your `models.json`, hands
+# the container a placeholder, and swaps it on a relay running on this machine. `cpus` and `memory`
+# bound one container, so `concurrency` times these two is what the machine has to carry.
+[isolation]
+backend = "docker"
+cpus = 1
+memory = "4g"
+models = "models.json"
+secrets = ".env"
