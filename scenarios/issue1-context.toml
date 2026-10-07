@@ -34,10 +34,8 @@ etalon = "etalon-v1"
 prompt = "../materials/issue1-simple-prompt.md"
 
 [agent]
-provider = "GRICAD"
-model = "ARES/DeepSeek-V4.1-Flash"
-# provider = "ilaas"
-# model = "gemma-4-31b"
+provider = "my-provider"
+model = "my-model"
 
 # Always declared, never inherited. The operator's `defaultThinkingLevel` once made this cell
 # identical to the base in every published matrix.
@@ -51,8 +49,8 @@ image = "trysquare-agent"
 # Declared in advance, and never rerun "just to see". Ten for one session; the smoke pass is
 # `--repetitions 2`, a value stamped into the name of the output directory so that it is not
 # mistaken for the real matrix.
-repetitions = 40
-concurrency = 60
+repetitions = 20
+concurrency = 5
 timeout = 1800
 attempts = 5
 
@@ -71,7 +69,10 @@ agents = { context = "../materials/AGENTS.md" }
 well_crafted = { prompt = "../materials/issue1-well-crafted-prompt.md" }
 # A skill is loaded through its brick, and the prompt invokes it. The bricks of several levers
 # add up: a cell taking `skill` and `add_tests` loads all three.
-skill = { prompt = "../materials/issue1-simple-prompt-with-skill.md", harness = ["skills-playtest", "extension"] }
+skill = { prompt = "../materials/issue1-simple-prompt-with-skill.md", harness = [
+  "skills-playtest",
+  "extension",
+] }
 add_tests = { harness = ["provided-probe"] }
 # No git history, and `ISSUES.md` removed before the agent starts. The history goes after the
 # script, so nothing it deleted can be read back with `git show`.

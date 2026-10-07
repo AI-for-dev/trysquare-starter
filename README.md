@@ -37,12 +37,15 @@ yourself.
 pi then needs a provider and an API key. The runs do not read `~/.pi/agent/models.json`: the
 containers get their providers from `models.json` at the root of this repository, which has the
 shape described in [the pi documentation](https://pi.dev/docs/latest/providers) and names each key
-as a variable, such as `$GRICAD_API_KEY`. The key itself is personal, so it cannot come from this
-repository: write it in a `.env` file next to `models.json`.
+as a variable, such as `$MY_PROVIDER_API_KEY`. The key itself is personal, so it cannot come from
+this repository: copy `.env.example` to `.env` and write your key there.
 
 ```bash
-GRICAD_API_KEY=...
+cp .env.example .env
 ```
+
+`models.json` declares a placeholder provider, `my-provider`. Replace its URL, its model and the
+name of its key variable with your provider's, and keep the variable name the same in `.env`.
 
 The scenario declares the provider and the model it expects, so read `[agent]` in
 `scenarios/issue1-context.toml` and make sure `models.json` declares that provider, or change those
@@ -102,7 +105,7 @@ uv run trysquare run scenarios/issue1-context.toml --output results
 
 The first one prints the full plan without spending anything. The second is a smoke pass, enough to
 see the spread; the number of repetitions goes into the name of the output directory, so it cannot
-be confused with the real matrix. The third runs the matrix as the scenario declares it, 40
+be confused with the real matrix. The third runs the matrix as the scenario declares it, 20
 repetitions per configuration.
 
 Clones and sessions live under `$TMPDIR/trysquare`, and trysquare falls back to the system
@@ -149,14 +152,15 @@ The provider and the model are in the `[agent]` table:
 
 ```toml
 [agent]
-provider = "test-ilaas"
-model = "gemma-4-31b_alt"
+provider = "my-provider"
+model = "my-model"
 thinking = "off"
 ```
 
 They are declared in the scenario, and never inherited from the shell, because they are the two
 values that decide what is being measured: an environment variable would make them invisible to
-whoever reads the file. If you do not have that provider, change these two lines before running.
+whoever reads the file. Both are placeholders: set them to the provider and the model your `models.json` declares
+before running.
 The tables published in the course were measured on `ilaas` and `gemma-4-31b`, against commit
 `d62ccd1f` of NEON.
 
@@ -164,15 +168,15 @@ The number of concurrent runs is in the `[protocol]` table, with the rest of the
 
 ```toml
 [protocol]
-repetitions = 40
-concurrency = 60
+repetitions = 20
+concurrency = 5
 timeout = 1800
 attempts = 5
 ```
 
 `concurrency` is how many runs trysquare launches at the same time. Lower it if your provider rate
-limits you, or if the machine cannot take it: each container is held to one CPU and 4 GB, so 60
-of them need 60 CPUs and 240 GB. `run` takes `--repetitions`, `--concurrency` and
+limits you, or if the machine cannot take it: each container is held to one CPU and 4 GB, so 5
+of them need 5 CPUs and 20 GB. `run` takes `--repetitions`, `--concurrency` and
 `--timeout` as overrides for one run, and records them, so trying a lower concurrency does not
 mean editing the scenario; `attempts` is read from the file only.
 
@@ -181,8 +185,9 @@ one says something, so the values that run are the ones above.
 
 ## The cost
 
-Forty repetitions over eleven configurations make 440 runs. At 60 at a time with a 1800 s timeout,
-`--dry-run` bounds the matrix at four hours, plus the tokens that go with them. Start with
+Twenty repetitions over eleven configurations make 220 runs. At 5 at a time with a 1800 s timeout,
+`--dry-run` bounds the matrix at 22 hours, plus the tokens that go with them; runs that finish
+before the timeout bring it down, and a provider that takes more concurrency does too. Start with
 `--dry-run`, which spends nothing, then with `--repetitions 3`.
 
 ## Layout
@@ -192,7 +197,8 @@ trysquare-starter/
   pyproject.toml     where trysquare comes from, and nothing else
   trysquare.toml     what the logical names point at, and how each run is isolated
   models.json        the providers and models the containers can reach
-  .env               your provider keys, not versioned
+  .env.example       the names of the keys `models.json` expects
+  .env               your provider keys, copied from `.env.example`, not versioned
   scenarios/         the experiment, in one self contained TOML file
   hypotheses/        what is predicted, written before measuring
   materials/         prompts, AGENTS.md, system prompt, skill, probe

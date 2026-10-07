@@ -1,69 +1,16 @@
 {
     "providers": {
-        "ilaas": {
-            "baseUrl": "https://llm.ilaas.fr/v1",
+        "my-provider": {
+            "baseUrl": "https://my-provider.com/api/v1",
             "api": "openai-completions",
-            "apiKey": "$ILAAS_API_KEY",
+            "apiKey": "$MY_PROVIDER_API_KEY",
             "models": [
                 {
-                    "id": "gemma-4-31b",
-                    "contextWindow": 256000,
-                    "reasoning": true
-                },
-                {
-                    "id": "qwen-3.6-35b-instruct",
-                    "contextWindow": 256000
-                }
-            ]
-        },
-        "GRICAD": {
-            "baseUrl": "https://alan.univ-grenoble-alpes.fr/api/v1",
-            "api": "openai-completions",
-            "apiKey": "$GRICAD_API_KEY",
-            "models": [
-                {
-                    "id": "ARES/DeepSeek-V4-Flash-0731",
-                    "name": "GRICAD DeepSeek V4 Flash",
+                    "id": "my-model",
+                    "name": "My Model",
                     "contextWindow": 128000,
                     "maxTokens": 32768,
-                    "reasoning": true,
-                    "compat": {
-                        "thinkingFormat": "chat-template",
-                        "chatTemplateKwargs": {
-                            "thinking": {
-                                "$var": "thinking.enabled"
-                            }
-                        },
-                        "maxTokensField": "max_tokens"
-                    }
-                },
-                {
-                    "id": "ARES/DeepSeek-V4.1-Flash",
-                    "name": "GRICAD DeepSeek V4.1 Flash",
-                    "contextWindow": 1048576,
-                    "maxTokens": 32768,
-                    "reasoning": true,
-                    "compat": {
-                        "thinkingFormat": "chat-template",
-                        "chatTemplateKwargs": {
-                            "thinking": {
-                                "$var": "thinking.enabled"
-                            },
-                            "reasoning_effort": {
-                                "$var": "reasoning.effort"
-                            }
-                        },
-                        "maxTokensField": "max_tokens"
-                    },
-                    "thinkingLevelMap": {
-                        "off": null,
-                        "minimal": "low",
-                        "low": "low",
-                        "medium": "high",
-                        "high": "high",
-                        "xhigh": "xhigh",
-                        "max": "max"
-                    }
+                    "reasoning": true
                 }
             ]
         }
