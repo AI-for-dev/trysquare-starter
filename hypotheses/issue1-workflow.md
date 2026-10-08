@@ -4,7 +4,34 @@ Declared before measuring, and versioned. A hypothesis written afterwards is a c
 disguise, and the point of writing it is to make a disappointing result publishable rather than
 quietly reworded.
 
-**State: written before the first matrix. No run of the `flow` cell has been read yet.**
+**State: written before the first matrix, and amended after three smoke runs of the `flow` cell
+whose journals and diffs were read.** The predictions below were not changed by them. The flow
+was, three times, and it is now frozen: see [The flow measured](#the-flow-measured).
+
+## The flow measured
+
+The flow of the workflows module, adapted to issue #1, with three changes made after a smoke run
+on gemma-4-31b each showed a defect. Every change is in this repository's history.
+
+1. **The reviewer leaves approved steps alone.** It receives the cumulative `diff`, so it read the
+   work of earlier steps as drive-by fixes and had the coder undo it: step 2 removed the side
+   bounce of step 1, step 4 reverted steps 2 and 3 and never converged. The `review` section and
+   the reviewer's scope rule now say that work is in scope. On the next run, every remark the
+   reviewers raised was about the step under review.
+2. **The reviewer and the auditor must call `verdict`.** Both ended a turn without it, after one
+   retry, and the run ended `failed` on a tree that passed the whole probe. Both agents are told
+   not to end a turn without the call, and both nodes retry twice.
+3. **The planner writes six steps at most.** A plan of ten steps stopped the run before any code
+   was written, since combo refuses a list longer than the map's `max:`. The planner knows the
+   limit, and the map allows eight.
+
+One defect is known and left in, because fixing it is a fourth change, read on a single run:
+
+- **The coder cannot delete a file.** Its tools are `read, grep, find, ls, edit, write`. In the
+  third smoke run it created a `test.sh` at the root of the repository, the reviewer asked three
+  times for its removal, and the step could not converge. Such a file stays in the delivered tree
+  and makes `in_scope` false. If the matrix shows it often, it is the first change of a `flow-v2`
+  cell measured next to this one, not in place of it.
 
 ## What is compared
 
@@ -56,8 +83,8 @@ The criterion is `bounce_bricks`, the faces of a brick, read against `single`.
 
 - Which role carries the effect. The flow is measured as a whole; removing one node at a time
   is a later matrix.
-- That the course flow is the best flow for this ticket. The module says so itself: its choices
-  are debatable, and this matrix measures them as written.
+- That this flow is the best flow for this ticket. The module says so itself: its choices are
+  debatable, and this matrix measures them as frozen above, three corrections included.
 - Anything about a mixed-model harness, a planner on a larger model for instance.
 
 ## What to read before the verdict
