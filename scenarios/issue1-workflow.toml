@@ -1,0 +1,130 @@
+# The workflow of module 2.2, measured against a single agent on issue #1.
+#
+# The workflows module writes the loop the trainee ran by hand into a combo flow: the explorer
+# and the tester read the ticket, the planner splits it, the coder carries out each step until
+# the suite passes and the reviewer approves, and the auditor sends the work back for a second
+# round when something is still open. The module stops before measuring it. This scenario is that
+# measurement, on the ticket whose hard half is a behaviour the probe executes.
+#
+# Two cells and one lever. Both receive the same ticket text, word for word: the single agent as
+# its prompt, the flow as the input of `/run`. What differs is who works on it.
+
+[scenario]
+name = "issue1-workflow"
+title = "The workflow of module 2.2 against a single agent, on the bounce of issue #1"
+hypothesis = "../hypotheses/issue1-workflow.md"
+
+[task]
+repo = "neon"
+# The same etalon as `issue1-context`, so the `single` cell here and the `well_crafted / no` cell
+# there measure the same configuration when they run on the same model.
+etalon = "etalon-v1"
+prompt = "../materials/issue1-well-crafted-prompt.md"
+
+[agent]
+provider = "my-provider"
+model = "my-model"
+
+# Always declared, never inherited. In the `flow` cell it is also the level of every subagent,
+# which cannot be declared anywhere: combo's subagents take the machine's `defaultThinkingLevel`,
+# and trysquare refuses the run when the two differ, because the brick below is named `agents`.
+thinking = "off"
+
+# The agent's tools belong to the experiment, not to the machine, so the image is declared here.
+# Built once from trysquare's `image/Dockerfile`: `docker build -t trysquare-agent image/`.
+image = "trysquare-agent"
+
+[protocol]
+repetitions = 20
+concurrency = 5
+# Per run, and the flow is long: up to two rounds, six steps a round, three attempts a step, each
+# attempt a coder and a reviewer. A run cut here is killed before combo writes its `usage.json`,
+# and trysquare refuses to read such a run as one that cost nothing.
+timeout = 3600
+attempts = 3
+
+# --- Cells -----------------------------------------------------------------
+
+[variants.single]
+# One agent, the well crafted request, nothing else. The reference.
+
+[variants.flow]
+# The same request, handed to the flow. The prompt only adds `/run issue1 ` in front of it: pi
+# runs the command before any model turn, so the main session spends nothing, and trysquare reads
+# the flow's cost from the `runs/<timestamp>/usage.json` combo writes in the clone.
+prompt = "../materials/issue1-flow-prompt.md"
+harness = ["combo", "agents", "flow"]
+
+# --- Harness bricks --------------------------------------------------------
+
+# The extension that runs `/run`. `load = "."` is the package root: its `package.json` declares the
+# extension, and `extension/` imports `../src`, so under docker the whole clone has to be mounted.
+[harness.combo]
+repo = "combo"
+tag = "v0.3.0"
+load = "."
+
+# The six roles of the module, copied from hands-on-harness at 11afb5f and versioned here, so
+# noting the revision of this repository next to a matrix pins them. combo ships no `tester`.
+#
+# **The name `agents` is not decorative**: it is what makes trysquare check the machine's
+# `defaultThinkingLevel` against `[agent] thinking`.
+#
+# `model` overrides the one each file declares, in the copy dropped into the clone. combo's
+# subagents read their model from that file and never from `[agent] model`, so this line has to
+# name the same model as `[agent]`, provider included.
+[harness.agents]
+paths = [
+  "../materials/agents/explorer.md",
+  "../materials/agents/tester.md",
+  "../materials/agents/planner.md",
+  "../materials/agents/coder.md",
+  "../materials/agents/reviewer.md",
+  "../materials/agents/auditor.md",
+]
+model = "my-provider/my-model"
+
+# The flow and the script its `check` nodes run. `kind = "files"` commits them on the etalon before
+# the agent starts, so they cost nothing in `touched`, and a flow that rewrote its own gate would
+# show in the diff.
+[harness.flow]
+kind = "files"
+
+[harness.flow.files]
+".pi/flows/issue1.md" = "../materials/flows/issue1.md"
+".pi/checks/test.sh" = "../materials/checks/test.sh"
+
+# --- Validation ------------------------------------------------------------
+
+# The validator of `issue1-context`, unchanged. It returns more metrics than this list, and the
+# ones left out do not apply here:
+#
+# - `suite_run` and `skill_invoked` read the main session. In the `flow` cell that session holds
+#   only the `/run`, and the suite is run by the flow's `check` nodes, so `suite_run` would be
+#   false in every run of the cell for a reason that says nothing about the work.
+# - `probe_intact` is not applicable without the `add_tests` brick.
+[[validation]]
+mode = "script"
+command = "../validators/issue1.py"
+metrics = [
+  "delivered",
+  "in_scope",
+  "touched",
+  "tests_added",
+  # The probe. The first four judge the correction issue #1 asks for, from the coarsest to the
+  # finest; the last one is a case the ticket names but the criterion does not carry.
+  "bounce_bricks",
+  "bounce_corners",
+  "bounce_exit",
+  "bounce_neighbors",
+  "bounce_tunneling",
+]
+
+# --- Verdict ---------------------------------------------------------------
+
+[verdict]
+criterion = "bounce_bricks"
+reference = "single"
+# Same reasoning as `issue1-context`: a red suite is a result for this task, not an inability to
+# judge, so `tests` is not a validity condition. A run that modified no file did not work.
+validity = ["delivered"]

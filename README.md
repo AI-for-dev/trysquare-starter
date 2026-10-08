@@ -1,12 +1,15 @@
 # trysquare-starter
 
-Everything needed to replay two experiments of the course in an environment you throw away
-afterwards, both measured against the bounce of issue #1 of NEON:
+Everything needed to replay three experiments of the course in an environment you throw away
+afterwards, all measured against the bounce of issue #1 of NEON:
 
 - `issue1-context`, the context levers of module 2.1, in nine configurations: one lever at a time,
   two of them again without the project's history, then two stacks;
 - `issue1-skill`, the two playtester skills of module 2.1, in three configurations: the careless
-  request alone, then with `playtester`, then with `dynamic-playtester`.
+  request alone, then with `playtester`, then with `dynamic-playtester`;
+- `issue1-workflow`, the workflow of module 2.2 against a single agent, in two configurations.
+
+The commands below name `issue1-context`. Replace it with the name of another scenario to run it.
 
 The repository does not contain the measuring tool. [trysquare](https://github.com/AI-for-dev/trysquare)
 is a Python package installed in a local venv; what lives here is the material of the experiment,
@@ -152,9 +155,10 @@ value this experiment wants built into the tool.
 
 ## Where to change the model and the concurrency
 
-Both live in the scenario, `scenarios/issue1-context.toml` and `scenarios/issue1-skill.toml`, and
-nowhere else. Change the two files together: the skill matrix is read next to the context one, and
-two different models would make that reading meaningless.
+Both live in the scenario, and nowhere else. Change the three files together: their matrices are
+read side by side, and two different models would make that reading meaningless.
+`issue1-workflow` names the model twice: in `[agent]`, and in `[harness.agents] model`, which is
+what the flow's subagents run on.
 
 The provider and the model are in the `[agent]` table:
 
@@ -254,6 +258,35 @@ etalon and need `git`, network access and `node`, and are skipped without them:
 
 ```bash
 cd validators && uv run --project .. python -m unittest test_issue1
+```
+
+## The workflow experiment
+
+`issue1-workflow` hands the same well crafted request to one agent (`single`, the reference) and
+to `/run issue1` (`flow`). The flow is the loop of the workflows module, adapted to issue #1 and
+run by [combo](https://github.com/AI-for-dev/combo): the explorer and the tester read the ticket,
+the planner splits it into steps, the coder carries out each step until `.pi/checks/test.sh`
+passes and the reviewer approves, and the auditor sends the work back for a second round when
+something is still open.
+
+The flow, its six agents and its check script are in `materials/`, and the scenario drops them
+into the clone. combo is pinned at `v0.3.0`. The validator and the criterion are the ones of
+`issue1-context`, so the `single` cell here measures the same configuration as `well_crafted / no`
+there, on the same model.
+
+pi runs `/run` before any model turn, so the main session spends nothing. trysquare 0.8.1 and
+later read the cost of a `flow` run from the `runs/<timestamp>/usage.json` that combo writes in
+the clone, and record it under `usage_sources` in `measures.json`.
+
+combo's subagents think at the machine's `defaultThinkingLevel`, which no file can declare.
+trysquare refuses the run when it differs from `[agent] thinking`, so set it in
+`~/.pi/agent/settings.json` before running.
+
+A flow that combo refuses (an unknown agent, a missing check script) is silent in print mode,
+and the run is recorded `empty`. Before a matrix, run one `flow` repetition and read its answer:
+
+```bash
+uv run trysquare run scenarios/issue1-workflow.toml --output results --repetitions 1
 ```
 
 ## Changing the experiment

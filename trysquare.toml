@@ -22,9 +22,11 @@
 [repos]
 neon = "https://github.com/AI-for-dev/neon.git"
 
-# The `web-access` brick of the scenario cites this repository by its logical name.
+# The `web-access` brick of `issue1-skill` cites this repository by its logical name.
 [harness]
 webaccess = "https://github.com/nicobailon/pi-web-access"
+# The `combo` brick of `issue1-workflow` cites this one: the extension that runs the flow.
+combo = "https://github.com/AI-for-dev/combo"
 
 # Each run executes in its own container, from the image the scenario declares in `[agent] image`.
 # The provider key never enters the container: trysquare reads it from your `models.json`, hands
