@@ -31,10 +31,12 @@ nodes:
         reads: [input, survey.output.impact.output, survey.output.cases.output, round.ledger]
         output: { steps: [{ text: string }] }
 
-      # One step after the other, in the same tree.
+      # One step after the other, in the same tree. The planner is asked for six steps at
+      # most; the cap leaves two more, because a longer plan stops the whole run rather
+      # than being cut.
       - id: steps
         map-from: plan.output.steps
-        max: 6
+        max: 8
         do:
           # The return to the coder: up to three attempts per step.
           - id: step
@@ -84,7 +86,8 @@ the test plan as a map. When `round.ledger` is not empty, this is a second
 round: plan only what the audit raised and nobody closed.
 
 The contract is the ticket's, not yours. Every case the ticket lists in
-`ISSUES.md` is part of it, and each one gets a step of its own. Only
+`ISSUES.md` is part of it, and each one gets a step of its own. Write six steps
+at most: a longer plan is refused and nothing gets done. Only
 `game/neon.js` and `game/neon.test.js` may change, and every function
 `game/neon.js` already exports keeps its name and its signature.
 
