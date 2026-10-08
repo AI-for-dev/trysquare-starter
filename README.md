@@ -270,7 +270,7 @@ passes and the reviewer approves, and the auditor sends the work back for a seco
 something is still open.
 
 The flow, its six agents and its check script are in `materials/`, and the scenario drops them
-into the clone. combo is pinned at `v0.3.0`. The validator and the criterion are the ones of
+into the clone. combo is pinned at `v0.4.0`. The validator and the criterion are the ones of
 `issue1-context`, so the `single` cell here measures the same configuration as `well_crafted / no`
 there, on the same model.
 

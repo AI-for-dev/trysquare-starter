@@ -61,7 +61,7 @@ harness = ["combo", "agents", "flow"]
 # extension, and `extension/` imports `../src`, so under docker the whole clone has to be mounted.
 [harness.combo]
 repo = "combo"
-tag = "v0.3.0"
+tag = "v0.4.0"
 load = "."
 
 # The six roles of the module, copied from hands-on-harness at 11afb5f and versioned here, so
