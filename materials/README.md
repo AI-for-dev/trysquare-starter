@@ -20,7 +20,7 @@ rather than rewriting this one.
 | `remove-issues-md.sh` | the `setup` script of the `blind` cells and of `issue1-skill`: deletes `ISSUES.md` |
 | `issue1-flow-prompt.md` | the well crafted request, handed to `/run issue1` in the `flow` cell of `issue1-workflow` |
 | `flows/issue1.md` | the combo flow of the workflows module, adapted to issue #1 |
-| `agents/` | the six roles the flow runs, copied from hands-on-harness at `11afb5f` |
+| `agents/` | the six roles the flow runs, copied from hands-on-harness at `11afb5f`; the reviewer and the auditor are amended, see the scenario |
 | `checks/test.sh` | what the flow's `check` nodes run: `npm test` |
 | `provided-probe/probe.test.js` | the scoring probe, dropped in the tree of the `add_tests` cells |
 

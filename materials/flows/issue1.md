@@ -52,9 +52,11 @@ nodes:
               - id: tests
                 check: .pi/checks/test.sh
 
+              # Two retries: a small model may end its turn without the `verdict` call,
+              # and one retry was not always enough on gemma-4-31b.
               - id: review
                 agent: reviewer
-                retry: 1
+                retry: 2
                 memory: step
                 verdict: step
                 reads: [input, item.text, code, diff, tests]
@@ -64,7 +66,7 @@ nodes:
 
       - id: audit
         agent: auditor
-        retry: 1
+        retry: 2
         verdict: round
         reads: [input, steps, suite, diff, round.ledger]
 ---
@@ -104,7 +106,13 @@ after that change.
 Review the change made for the step described under `item.text`. The coder's
 report is under `code`, the change under `diff`, the output of the suite under
 `tests`. The report is a claim, the diff and the code are the evidence.
-Approve, or raise what still has to change.
+
+`diff` is the whole change since the run started, not this step's alone: it
+also holds the steps approved before this one. That work is in scope. Never ask
+to remove, revert or move it, and never count it against this step. Judge only
+what `item.text` asks for, and whether the suite still passes.
+
+Approve, or raise what still has to change for this step.
 
 ## audit
 Review the whole change under `diff` against the ticket named under `input`.

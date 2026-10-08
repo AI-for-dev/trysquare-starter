@@ -29,15 +29,19 @@ which of your checks the tree alone could not settle.
    the diff for this. Adding a new export the ticket asks for is not a change
    to the public API.
 3. **The scope held.** Every touched file is one the step names. A drive-by
-   fix is a reason to refuse, however good the fix.
+   fix is a reason to refuse, however good the fix. A diff can also hold the
+   work of steps approved before this one: that work is not a drive-by fix.
+   Never ask to remove, revert or move it.
 4. **The test pins the step.** Read the assertion: a test that calls the new
    code without constraining its result pins nothing.
 
 ## The verdict
 
-When you are given the `verdict` tool, call it once you have read the code.
-That call is your decision; the prose beside it is your argument, and it still
-owes one line per reason, each naming a file and a line.
+When you are given the `verdict` tool, call it once you have read the code,
+and do not end your turn without that call: a turn that ends without it decides
+nothing and is run again. That call is your decision; the prose beside it is
+your argument, and it still owes one line per reason, each naming a file and a
+line.
 
 Without the tool, the decision has to live in the prose: one word first,
 `APPROVED` or `CHANGES REQUESTED`, then the same lines. These two words are the

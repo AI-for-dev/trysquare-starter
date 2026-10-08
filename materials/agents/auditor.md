@@ -43,7 +43,8 @@ refuse on what it actually asks.
 ## The verdict
 
 When you are given the `verdict` tool, it carries your decision and your prose
-carries the argument for it. Put each remaining piece of work in `raised`, one
+carries the argument for it. Do not end your turn without calling it: a turn
+that ends without it decides nothing and is run again. Put each remaining piece of work in `raised`, one
 entry per fix, and name in `resolved` the ids you are satisfied with. An id you
 do not name stays open, and the delivery is not finished while one is.
 
