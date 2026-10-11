@@ -467,15 +467,16 @@ class TestTheReferenceTrees(unittest.TestCase):
     def setUpClass(cls):
         etalon()
 
-    def passed(self, variant: str) -> dict[str, int]:
-        source = (etalon() / issue1.SOURCE_FILE).read_text()
+    def passed(self, variant: str, source: str | None = None) -> dict[str, int]:
+        if source is None:
+            source = issue1.reference_source((etalon() / issue1.SOURCE_FILE).read_text(), variant)
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "tree"
             shutil.copytree(etalon(), root)
             shutil.copy(issue1.PROBE, root / issue1.PROBE_FILE)
             answer = probe_on(root)(
                 ["node", "--test", f"--test-reporter={issue1.REPORTER}", "game/**/*.test.js"],
-                {issue1.SOURCE_FILE: issue1.reference_source(source, variant)},
+                {issue1.SOURCE_FILE: source},
                 None,
                 None,
                 60,
@@ -495,6 +496,22 @@ class TestTheReferenceTrees(unittest.TestCase):
 
     def test_the_wrong_axis_fails_the_side_faces(self):
         self.assertLess(self.passed("axis")["brick"], 4)
+
+    def test_a_correction_moved_into_step_scores_with_frame_left_as_it_was(self):
+        """The probe calls `frame()` first. The etalon's block there switches the brick off
+        without a bounce, and a correction moved into `step()` may leave it in place: the game
+        never reaches it, since `step()` runs first, so the probe must not either. It undoes what
+        a `frame()` that did not deflect did before it tries `step()`."""
+        etalon_source = (etalon() / issue1.SOURCE_FILE).read_text()
+        moved = "  ball.y += ball.vy * dt;\n"
+        self.assertEqual(etalon_source.count(moved), 1)
+        source = etalon_source.replace(
+            issue1.STEP_ANCHOR, "  __record(ball);\n" + issue1.STEP_ANCHOR
+        ).replace(moved, moved + "  __resolveBricks(state);\n")
+        source += issue1.REFERENCE_FIX.read_text().replace("__VARIANT__", "complete")
+        counts = self.passed("complete", source)
+        counts.pop("", None)
+        self.assertEqual(counts, self.EXPECTED["complete"])
 
 
 class TestTheReferenceAnchors(unittest.TestCase):
