@@ -10,7 +10,8 @@ stdout, and three separate states: I judged, I could not judge *this metric*, I 
 judge *this run*. What is left here is the domain, and nothing else.
 
 Current state: `delivered`, `in_scope`, `tests_added`, `suite_run`, `skill_invoked`,
-`probe_intact`, and the six columns of the probe.
+`probe_intact`, `catalogue_built`, the five columns of the probe, and the seven columns that
+judge the agent's tests against reference trees.
 """
 
 from __future__ import annotations
@@ -23,18 +24,16 @@ from trysquare.assay import Assay, CannotJudge, Metric, ProbeTimeout, validator
 HERE = Path(__file__).resolve().parent
 
 # The probe, as **a single file** for its two jobs. A `kind = "files"` brick drops it in the tree
-# of one cell before the agent starts, at this very path, and commits it on the etalon: that cell
-# works with the red suite and the specification in front of it. Every cell, that one included,
-# is then scored by this same file, dropped into a copy of the measured tree outside the clone
-# and run like the suite of the repo.
+# of the `add_tests` cells before the agent starts, at this very path, and commits it on the
+# etalon: those cells work with the red suite and the specification in front of them. Every cell,
+# those included, is then scored by this same file, dropped into a copy of the measured tree
+# outside the clone and run like the suite of the repo.
 #
-# Two twin files held that role before, one for the brick and one for the scoring. They differed
-# only by their import line and by the two latent groups, and their eleven shared cases had to
-# stay copied fixture by fixture, without which the cell would have measured "does the agent
-# guess a second scale" instead of "does the agent correct itself". An invariant no test could
-# state without rewriting the comparison at every case added: that is the kind of gap that widens
-# in silence, so the two files are now one and the only line that separated them is rewritten
-# here, see `scoring_probe()`.
+# One file and not two, because the cases the agent reads and the cases that score him must stay
+# identical fixture by fixture, without which those cells would measure "does the agent guess a
+# second scale" instead of "does the agent correct itself". Two copies would drift apart in
+# silence. The only lines that differ between the two uses are rewritten here, see
+# `scoring_probe()`.
 PROBE = HERE.parent / "materials" / "provided-probe" / "probe.test.js"
 PROBE_FILE = "game/probe.test.js"
 
@@ -48,36 +47,33 @@ SOURCE_FILE = "game/neon.js"
 TEST_FILE = "game/neon.test.js"
 
 # The only line the validator adds to the agent's `game/neon.js`. Brick collision lives in
-# `frame()`, which the repo does not export: without this line, the probe would not reach the
-# correction of an agent who leaves the bounce where the comment in the repo points, and would
-# therefore only reach the cells that refactored along the way.
+# `frame()`, which the etalon exports, but nothing obliges the agent to keep that `export`: this
+# line lets the probe reach `frame()` whatever the agent did with its export, as long as the
+# function still exists in the module.
 #
-# An alias and not `export { frame }`: an agent who exported `frame` himself would make a
-# duplicate, and the module would no longer compile. `typeof` first because an agent who moved
-# `frame` elsewhere leaves nothing to export, and exporting a name that does not exist breaks the
-# linking of the whole module - the probe could not even judge the walls.
+# An alias and not `export { frame }`: the etalon already exports `frame`, so that would be a
+# duplicate export and the module would no longer compile. `typeof` first because an agent who
+# moved `frame` elsewhere leaves nothing to export, and exporting a name that does not exist
+# breaks the linking of the whole module - the probe could not judge anything.
 INTERNAL_EXPORT = "\nexport const internalFrame = typeof frame === 'undefined' ? null : frame;\n"
 
 # The only thing separating the probe as the agent reads it from the probe as it scores: its
 # import line, and the guard that goes with it.
 #
-# The source imports `frame` directly, and that is what it must do. The cell that receives it has
-# to export the render loop for the file to even run, its header says so, and `internalFrame` is a
-# harness name that has no business under an agent's eyes: he would write it into `game/neon.js`,
-# where adding `INTERNAL_EXPORT` would make it a duplicate export and the module would no longer
-# compile.
+# The source imports `frame` directly, and that is what it must do. `internalFrame` is a harness
+# name that has no business under an agent's eyes: he would write it into `game/neon.js`, where
+# adding `INTERNAL_EXPORT` would make it a duplicate export and the module would no longer compile.
 #
-# But the other cells receive nothing, and nothing in issue #1 asks them to export `frame`:
-# scoring them on that import would make any correction left inside `frame()` unjudgeable, that is
-# to say precisely where the comment in the repo sends it. The module would not even link - "does
-# not provide an export named 'frame'" - and the six columns would fall silent together on a
-# correct fix. The scoring copy therefore goes through the alias.
+# The scoring copy goes through the alias instead, so that it does not depend on the agent keeping
+# the `export` of `frame`. An agent who dropped it would otherwise leave a module that does not
+# link - "does not provide an export named 'frame'" - and the five columns would fall silent
+# together, even on a correct fix.
 SOURCE_IMPORT = "  frame,\n"
 SCORING_IMPORT = "  internalFrame as frame,\n"
 
 # `internalFrame` is `null` when the agent moved `frame` out of the module: there was nothing to
 # export then. The probe has lost its grip on the render loop and says so, instead of playing
-# fifteen cases each of which would die on the same TypeError. The guard has no place in the
+# twelve cases each of which would die on the same TypeError. The guard has no place in the
 # source, where the direct import makes it unreachable: a missing `frame` there breaks the linking
 # of the module before a single line runs.
 GUARD_ANCHOR = "} from './neon.js';\n"
@@ -107,27 +103,27 @@ TEST_CASE = re.compile(r"^\s*(?:test|it)(?:\.\w+)?\s*\(", re.M)
 # One `describe` of the probe gives one metric. The probe judges nothing, it reports case by case;
 # the grouping is here, in a single place.
 #
-# `bounce_domain` existed and was removed. It played the walls of the field, which already bounce
-# at the etalon: the column was green everywhere, including on runs that had delivered nothing,
-# and therefore separated no cell of the matrix.
+# There is no column for the walls of the field. They already bounce at the etalon, so such a
+# column would be green everywhere, including on runs that delivered nothing, and would separate
+# no cell of the matrix.
 #
 # The first four columns judge the correction that was asked for, from the coarsest to the finest,
 # and they really do separate from one another: `exit` blackens a correction that flips the speed
 # without taking the ball back out of the brick, `neighbors` blackens the one that counts the
 # bounce twice when the ball overlaps two bricks of the same seam of the grid.
 #
-# The last two - `tunneling` and `paddle` - are **latent** bugs that issue #1 does not ask anyone
-# to fix. It is the exact mirror of the flaw that got `bounce_domain` removed, and they are kept
-# anyway, for a reason that one did not have: a column that is green everywhere does not
+# The last one, `tunneling`, is a **latent** bug that issue #1 does not ask anyone to fix. Where
+# a walls column would be green everywhere, this one is black almost everywhere, and it is kept
+# anyway for a reason the walls do not have: a column that is green everywhere does not
 # distinguish "fixed" from "delivered nothing" and is therefore read as a success by mistake,
 # whereas a black column states a verifiable fact about the matrix - nobody went beyond what the
-# ticket named. They carry no verdict and enter no criterion.
+# ticket named. It carries no verdict and enters no criterion.
 #
-# They are no longer black *everywhere*, and that is the accepted counterpart of the single file:
-# the probe being dropped as is in the cell that receives the brick, that cell reads these two
-# groups and can make them pass. The line is then read for what it is - "an agent who is shown
-# these cases fixes them, the others never see them" - and not as a measure comparable to the
-# first four columns, which are the only ones every cell is judged on with the same ruler.
+# It is not black *everywhere*, and that is the accepted counterpart of the single file: the probe
+# being dropped as is in the `add_tests` cells, those cells read this group and can make it pass.
+# The column is then read for what it is - "an agent who is shown this case fixes it, the others
+# never see it" - and not as a measure comparable to the first four columns, which are the only
+# ones every cell is judged on with the same ruler.
 GROUPS = {
     "brick": "bounce_bricks",
     "corner": "bounce_corners",
@@ -139,16 +135,13 @@ GROUPS = {
 # The commands that run the suite, recognised by **a pattern in the command** and not by string
 # equality.
 #
-# This list used to be a list of exact strings, on the grounds that a pattern decides in advance
-# about what nobody has seen yet, where a list is completed by looking at what the agents actually
-# typed. The argument was right and the conclusion wrong: what varies from one model to the next is
-# not *which* command runs the suite, it is what the agent puts around it. The
-# `..._opencode-go_deepseek-v4-flash_n20` matrix returned `suite_run` false in its nine cells,
-# 0/180, while all 180 runs had run the suite: that model prefixes every call with the working
-# directory (`cd /private/var/.../repo && npm test`, 664 times) and readily redirects the output
-# (`npm test 2>&1 | tail -30`, 80 times), while `gemma-4-31b` types a bare `npm test`. A column
-# blackened end to end by the comparator, on a process metric, reads like a behaviour and is not
-# one.
+# What varies from one model to the next is not *which* command runs the suite, it is what the
+# agent puts around it. Matched as exact strings, the `..._opencode-go_deepseek-v4-flash_n20`
+# matrix returned `suite_run` false in its nine cells, 0/180, while all 180 runs had run the
+# suite: that model prefixes every call with the working directory
+# (`cd /private/var/.../repo && npm test`, 664 times) and readily redirects the output
+# (`npm test 2>&1 | tail -30`, 80 times), while `gemma-4-31b` types a bare `npm test`. A process
+# column blackened end to end by the way it is matched reads like a behaviour and is not one.
 #
 # The risk of the pattern is the opposite one: counting a *mention* as a run, in an
 # `echo "=== npm test ==="` or a `grep 'npm test' package.json`. It was looked for in the 360
@@ -170,12 +163,14 @@ RUN_COMMANDS = (
 # prompt receives only the name and the description of each loaded skill, and "when a task matches,
 # the agent uses `read` to load the full SKILL.md" - the same page adding that "models don't always
 # do this". A skill loaded by its name is therefore invoked by a read of its `SKILL.md`, and the
-# gap between "loaded" and "read" is what the column exists to show on those cells.
+# gap between "loaded" and "read" is what the column exists to show on cells that load a skill
+# without naming it in the prompt.
 #
-# The file name rather than the path in the scenario, for two reasons. trysquare loads the skill
-# twice - `--skill` on the absolute path of the brick, and a copy in `.pi/skills/<name>/` of the
-# clone - so two paths designate the same read. And a brick name that changes must not turn the
-# column falsely black: the reason is what says *which* skill was read.
+# The file name rather than the path in the scenario, for two reasons. The path depends on the
+# trysquare that ran: since 0.12 `--skill` points at the skill's copy in `.pi/skills/<name>/` of
+# the clone, before that at the brick itself, and archives of both kinds are replayed. And a brick
+# name that changes must not turn the column falsely black: the reason is what says *which* skill
+# was read.
 SKILL_MD = "SKILL.md"
 
 # The tools that can read a file without writing it. A write to a `SKILL.md` is not an invocation,
@@ -209,7 +204,9 @@ def evaluate(run: Assay) -> dict:
         "suite_run": suite_run(run),
         "skill_invoked": skill_invoked(run),
         "probe_intact": or_unjudged(lambda: probe_intact(run)),
+        "catalogue_built": catalogue_built(run),
         **bounces(run),
+        **test_quality(run),
     }
 
 
@@ -236,8 +233,8 @@ def tests_added(run: Assay) -> Metric:
     The count is an **honest lower bound** and not a coverage measure. An agent who replaces one
     existing case by two new ones scores `+1` although he added two, and a `for` over a table of
     cases only adds one to the count. The question asked is "did he add any", for which a count is
-    enough; "how many" would require running the suite and reading its report, which is the job of
-    `tests`.
+    enough; "how many" would require running the suite and reading its report, which this
+    scenario does not do.
     """
     reference = TEST_CASE.findall(run.sources_at_etalon(TEST_FILE))
     file = run.repo / TEST_FILE
@@ -263,7 +260,7 @@ def tests_added(run: Assay) -> Metric:
 def probe_intact(run: Assay) -> Metric:
     """Is the provided probe still the one that was provided?
 
-    The `+probe` cell hands the agent the test that judges him. That is the whole point of the
+    The `add_tests` cells hand the agent the test that judges him. That is the whole point of the
     question asked - does he correct himself when he already has the tests he needs - and it is
     also the open door to the answer that costs nothing: loosen the assertion until it passes.
     The scoring is not fooled, `bounces()` rewriting its own copy of the probe in the tree it
@@ -272,10 +269,10 @@ def probe_intact(run: Assay) -> Metric:
 
     Three states, and the third one is the reason `run.given` exists. A missing file is a fact
     with two causes - never provided, or deleted along the way - and without the list of what the
-    harness dropped, a run that erases the test it was given would read exactly like the six cells
+    harness dropped, a run that erases the test it was given would read exactly like the cells
     that never received one.
 
-    **Not applicable in those six**, and that differs from `skill_invoked`, which is false there:
+    **Not applicable in those cells**, and that differs from `skill_invoked`, which is false there:
     "no `SKILL.md` was read" is a true fact about those sessions, whereas "the probe is intact" has
     no truth value where there is no probe. Returned without reading the name of the cell - the
     tree and the archive are what answer, not the configuration - so every cell is indeed scored
@@ -298,8 +295,8 @@ def scoring_probe() -> str:
     """The probe of the brick, with the alias in place of the direct import.
 
     Two substitutions on a file that stays, for everything else, the one the agent had in front of
-    him: same fixtures, same assertions, same order. That is the condition for the cell that
-    receives the brick to measure "does the agent correct himself" and not "does the agent guess a
+    him: same fixtures, same assertions, same order. That is the condition for the cells that
+    receive the brick to measure "does the agent correct himself" and not "does the agent guess a
     second scale".
 
     An anchor that does not match is a mistake of this repository, not an answer from the agent:
@@ -319,7 +316,7 @@ def scoring_probe() -> str:
 
 
 def bounces(run: Assay) -> dict:
-    """The six columns of the probe, from a single run.
+    """The five columns of the probe, from a single run.
 
     A behaviour is executed instead of being recognised: no pattern in the diff, no judge, no
     tokens, and a wrong answer is an assertion that breaks. The probe runs on a copy of the
@@ -345,19 +342,19 @@ def bounces(run: Assay) -> dict:
                           must apply once. A `vy = -vy` counted twice cancels out and the ball goes
                           through.
 
-    The last two are latent bugs issue #1 does not ask for - `bounce_tunneling` for tunneling,
-    `bounce_paddle` for the three flaws of the paddle. The comment on `GROUPS` says why they are
-    kept, and why the cell that receives the brick is the only one that can make them pass: it
-    reads the probe, so it sees those cases too.
+    The last one, `bounce_tunneling`, is a latent bug issue #1 does not ask for. The comment on
+    `GROUPS` says why it is kept, and why the `add_tests` cells are the only ones that can make it
+    pass: they read the probe, so they see that case too.
 
     Checked on six trees, without spending a token, and the table is the deliverable of that check
-    (columns in the order above):
+    (columns in the order above; the probe then also had a paddle column, since removed and left
+    out here):
 
-      etalon untouched                       0/4  0/1  0/4  0/2  0/1  0/3
-      per face, without repositioning        4/4  0/1  0/4  0/2  0/1  0/3
-      per face, with repositioning           4/4  0/1  4/4  2/2  0/1  0/3
-      complete: corner + exit + sweep        4/4  1/1  4/4  2/2  1/1  0/3
-      the same, extracted into `step()`      4/4  0/1  4/4  2/2  0/1  0/3
+      etalon untouched                       0/4  0/1  0/4  0/2  0/1
+      per face, without repositioning        4/4  0/1  0/4  0/2  0/1
+      per face, with repositioning           4/4  0/1  4/4  2/2  0/1
+      complete: corner + exit + sweep        4/4  1/1  4/4  2/2  1/1
+      the same, extracted into `step()`      4/4  0/1  4/4  2/2  0/1
       `frame` renamed                        no case at all, and the reason for that silence
 
     The second to last line is the one that matters for the machinery: it is the refactor issue #2
@@ -367,16 +364,16 @@ def bounces(run: Assay) -> dict:
     fixture were lowered for that reason; the probe says so.
 
     Checked again after the two probes were merged into one file, on four trees and without
-    spending a token. The first three return the same fifteen verdicts as before the merge, case by
-    case and detail by detail; the fourth is the one that counts, since it establishes that the six
-    columns are **reachable** and that none is black by construction:
+    spending a token. The first three return the same verdicts as before the merge, case by case
+    and detail by detail; the fourth is the one that counts, since it establishes that the columns
+    are **reachable** and that none is black by construction:
 
-      etalon untouched                         0/4  0/1  0/4  0/2  0/1  0/3
-      corner + exit, inside `frame()`          4/4  1/1  4/4  2/2  0/1  0/3
-      the same, extracted into `step()`        4/4  1/1  4/4  2/2  0/1  0/3
-      the same + sweep + paddle fixed          4/4  1/1  4/4  2/2  1/1  3/3
+      etalon untouched                         0/4  0/1  0/4  0/2  0/1
+      corner + exit, inside `frame()`          4/4  1/1  4/4  2/2  0/1
+      the same, extracted into `step()`        4/4  1/1  4/4  2/2  0/1
+      the same + sweep                         4/4  1/1  4/4  2/2  1/1
 
-    The six metrics fail or fall silent **together** when the probe could not run: it is a single
+    The five metrics fail or fall silent **together** when the probe could not run: it is a single
     run, so a single thing can be missing.
     """
     try:
@@ -387,8 +384,8 @@ def bounces(run: Assay) -> dict:
             write={PROBE_FILE: scoring_probe()},
             append={SOURCE_FILE: INTERNAL_EXPORT},
             # The agent's tests go: they do not measure what is measured here, and their cases
-            # would mix with the cases of the probe in the same report. What they are worth is the
-            # `tests` column, which runs them where that is their job.
+            # would mix with the cases of the probe in the same report. This scenario only counts
+            # them, in `tests_added`.
             drop="*.test.js",
         )
     except ProbeTimeout as e:
@@ -396,7 +393,8 @@ def bounces(run: Assay) -> dict:
         # forever, which is a failure of the agent and not of the harness. The base refuses by
         # default, and this is where we know more than it does.
         return {
-            name: Metric(False, f"the correction does not terminate: {e}") for name in GROUPS.values()
+            name: Metric(False, f"the correction does not terminate: {e}")
+            for name in GROUPS.values()
         }
     except CannotJudge as e:
         return {name: Metric.unjudged(str(e)) for name in GROUPS.values()}
@@ -432,13 +430,186 @@ def group(played: list[dict], key: str) -> Metric:
     )
 
 
+# --- The agent's tests, judged against reference trees ---------------------
+#
+# The playtester skills end on red tests and leave the game as it is, so the probe above has
+# nothing to score in their cells. What they produce is tests, and a test is judged by running it
+# against code whose defects are known: the etalon, the complete correction, and five corrections
+# that each lack one part of it. `reference-fix.js` holds that code; the agent's own `neon.js` is
+# replaced by it in a copy of the tree, and the agent's test files run unchanged.
+#
+# A test that fails on the complete correction is wrong, whatever else it does. A test that passes
+# on it and fails on one incomplete variant **detects** that defect. The five variants are the
+# probe's four groups plus the wrong axis, which the etalon cannot isolate since it has no bounce
+# at all:
+#
+#   `detects_axis`       every brick flips `vy`, whatever the face
+#   `detects_corner`     equal penetration on both axes flips `vy` only
+#   `detects_exit`       the speed flips but the ball stays inside the brick
+#   `detects_neighbors`  two bricks hit in one pass each flip the speed
+#   `detects_tunneling`  no swept detection
+#
+# Checked without spending a token, by running the probe itself as if it were the agent's tests
+# (`test_issue1.py` replays it): it passes 12/12 on the complete correction, 0/12 on the etalon,
+# and each variant fails exactly the group of its defect.
+#
+# The limit is the agent's API. A test that imports a name the etalon does not export does not
+# load against the reference, and the run is then not judged rather than scored false: the
+# reason names the missing export. A test that exercises a module the agent created, instead of
+# `neon.js`, passes or fails the same way on every variant, so it detects nothing.
+REFERENCE_FIX = HERE / "reference-fix.js"
+DEFECTS = {
+    "axis": "detects_axis",
+    "corner": "detects_corner",
+    "exit": "detects_exit",
+    "neighbors": "detects_neighbors",
+    "tunneling": "detects_tunneling",
+}
+TEST_QUALITY = ("tests_sound", "tests_red", *DEFECTS.values())
+
+# Where the reference goes into the etalon's `neon.js`: `step()` records the position before it
+# moves the ball, and the brick loop of `frame()` is replaced by the correction and the drawing.
+STEP_ANCHOR = "  ball.x += ball.vx * dt;\n"
+BRICKS_START = "  // Bricks: collision + bounce + score + drawing, all in one place.\n"
+BRICKS_END = "\n  // Paddle"
+BRICKS_REFERENCE = """\
+  // Bricks: the reference correction of the validator, then the drawing.
+  __resolveBricks(state);
+  for (const brick of state.bricks) {
+    if (!brick.alive) continue;
+    ctx.fillStyle = brickColor(brick.row);
+    ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
+  }
+"""
+
+
+def reference_source(etalon: str, variant: str) -> str:
+    """The etalon's `neon.js` with the reference correction in it, or the etalon itself.
+
+    An anchor that does not match is a mistake of this repository - the etalon moved - and not an
+    answer from the agent, so it raises, like `scoring_probe()`.
+    """
+    if variant == "etalon":
+        return etalon
+    for anchor in (STEP_ANCHOR, BRICKS_START):
+        if etalon.count(anchor) != 1:
+            raise RuntimeError(
+                f"{SOURCE_FILE} at the etalon: the anchor {anchor!r} should have been found "
+                f"exactly once, found {etalon.count(anchor)} times. reference-fix.js has to be "
+                f"placed again."
+            )
+    start = etalon.index(BRICKS_START)
+    end = etalon.index(BRICKS_END, start)
+    source = etalon[:start] + BRICKS_REFERENCE + etalon[end:]
+    source = source.replace(STEP_ANCHOR, "  __record(ball);\n" + STEP_ANCHOR)
+    return source + REFERENCE_FIX.read_text().replace("__VARIANT__", variant)
+
+
+def test_quality(run: Assay) -> dict:
+    """The agent's tests, run against the etalon, the complete correction and its five variants."""
+
+    def silent(reason: str) -> dict:
+        return {name: Metric.unjudged(reason) for name in TEST_QUALITY}
+
+    try:
+        etalon = run.sources_at_etalon(SOURCE_FILE)
+        given = run.given
+    except CannotJudge as e:
+        return silent(str(e))
+
+    played = {}
+    for variant in ("complete", "etalon", *DEFECTS):
+        try:
+            answer = run.probe(
+                ["node", "--test", f"--test-reporter={REPORTER}", "game/**/*.test.js"],
+                write={SOURCE_FILE: reference_source(etalon, variant)},
+                # The provided probe is not the agent's test, and it would detect everything.
+                drop=PurePosixPath(PROBE_FILE).name if PROBE_FILE in given else None,
+            )
+        except CannotJudge as e:
+            return silent(f"the agent's tests, against the {variant} reference: {e}")
+        if answer.get("error"):
+            return silent(f"the agent's tests did not run against the reference: {answer['error']}")
+        if answer.get("broken"):
+            files = ", ".join(b.get("file", "?") for b in answer["broken"])
+            why = answer.get("stderr") or answer["broken"][0].get("detail", "")
+            return silent(f"{files} does not load against the reference: {why}")
+        played[variant] = {
+            (c.get("file", ""), c.get("suite", ""), c.get("name", "")): c.get("ok", False)
+            for c in answer.get("cases") or []
+        }
+    return judge_tests(played)
+
+
+def judge_tests(played: dict[str, dict[tuple, bool]]) -> dict:
+    """The metrics, from which case passed on which tree. Kept apart so it can be tested alone."""
+    complete = played["complete"]
+    wrong = sorted(case for case, ok in complete.items() if not ok)
+    sound = [case for case, ok in complete.items() if ok]
+
+    def named(cases: list[tuple]) -> str:
+        shown = [" > ".join(part for part in case[1:] if part) for case in cases[:3]]
+        more = f" and {len(cases) - 3} more" if len(cases) > 3 else ""
+        return " ; ".join(shown) + more
+
+    def caught(variant: str) -> list[tuple]:
+        return sorted(case for case in sound if played[variant].get(case) is False)
+
+    metrics = {
+        "tests_sound": Metric(
+            not wrong, f"fail on the complete correction: {named(wrong)}" if wrong else ""
+        )
+    }
+    red = caught("etalon")
+    metrics["tests_red"] = Metric(
+        bool(red),
+        named(red) if red else "no test that passes on the correction fails on the etalon",
+    )
+    for variant, name in DEFECTS.items():
+        found = caught(variant)
+        metrics[name] = Metric(bool(found), named(found))
+    return metrics
+
+
+# --- The catalogue of dynamic-playtester ------------------------------------
+#
+# `dynamic-playtester` builds its catalogue through a nested `pi -p` session whose own session is
+# not kept, so the only trace is the file it writes beside the skill. trysquare archives it, and
+# `run.skills` is where it lands.
+DYNAMIC_SKILL = "dynamic-playtester"
+CATALOGUE = PurePosixPath("references") / "bugs-arcade.md"
+CATALOGUE_ENTRY = re.compile(r"^#### ", re.M)
+
+
+def catalogue_built(run: Assay) -> Metric:
+    """Did `dynamic-playtester` write a catalogue with at least one entry, and how many?
+
+    **Not applicable** where the prompt did not invoke that skill: the question has no truth value
+    there. Read from the session (`skills_expanded`), not from the name of the cell.
+    """
+    try:
+        expanded = run.skills_expanded
+    except CannotJudge as e:
+        return Metric.unjudged(str(e))
+    if DYNAMIC_SKILL not in expanded:
+        return Metric.unjudged(f"the prompt did not invoke {DYNAMIC_SKILL}")
+    try:
+        file = run.skills / DYNAMIC_SKILL / CATALOGUE
+    except CannotJudge as e:
+        return Metric.unjudged(str(e))
+    if not file.is_file():
+        return Metric(False, f"no {CATALOGUE} was written")
+    entries = len(CATALOGUE_ENTRY.findall(file.read_text(errors="replace")))
+    return Metric(entries > 0, f"{entries} entries")
+
+
 def suite_run(run: Assay) -> Metric:
     """Did the agent run the suite himself, at least once?
 
-    A **process** metric, read in the archived session: it says what the agent did, where `tests`
-    says in which state he left the repo. The two separate in both directions, and that is why it
-    exists: an agent who fixes correctly without ever checking leaves a green suite, and an agent
-    who runs the suite and leaves red still did check.
+    A **process** metric, read in the archived session: it says what the agent did, not in which
+    state he left the suite. The two separate in both directions, and that is why it exists: an
+    agent who fixes correctly without ever checking leaves a green suite, and an agent who runs the
+    suite and leaves it red still did check.
 
     **A failing call counts.** In the archived sessions, `npm test` on a red suite comes back with
     `isError` true, exactly like a command that does not exist: the suite did run, and excluding it
@@ -477,23 +648,21 @@ def skill_invoked(run: Assay) -> Metric:
     unchanged `bounce_bricks` would read "the skill is useless" when it may say "the skill was
     never opened".
 
-    **The two ways of loading a skill leave opposite traces**, and counting only the first one made
-    this column false on three full cells:
+    **The two ways of loading a skill leave opposite traces**, and counting only the first one
+    makes this column false on runs whose prompt carried the whole skill:
 
-    - `harness = ["skills-tie-cases-3"]` alone: pi puts only the name and the description in the
-      system prompt, and "when a task matches, the agent uses `read` to load the full SKILL.md" -
-      so the invocation **is** a tool call, and the agent may not make it (3 times out of 5 in
-      `+skill-tie-3`, the same page adding that "models don't always do this").
-    - a `/skill:<name>` in the prompt, which is what `issue1-simple-prompt-with-skill.md`
-      does: pi expands the reference **client side** and pastes the whole `SKILL.md` into the first
-      message. There is nothing left to read, so no call left to count, and the five runs of
-      `well crafted stack +skill-tie-3-force` came out false although the body of the skill was in
-      the prompt from beginning to end.
+    - a skill brick alone: pi puts only the name and the description in the system prompt, and
+      "when a task matches, the agent uses `read` to load the full SKILL.md" - so the invocation
+      **is** a tool call, and the agent may not make it (the same page adds that "models don't
+      always do this").
+    - a `/skill:<name>` in the prompt, which is what the `issue1-simple-prompt-with-*.md` do:
+      pi expands the reference **client side** and pastes the whole `SKILL.md` into the first
+      message. There is nothing left to read, so no call left to count.
 
     That is why the column says "entered the context" and not "went to fetch it": the second has no
-    meaning in a `-force` cell, where the operator answered in the agent's place. The gap between
-    the two cells - initiative against constraint - is exactly the effect `-force` exists to
-    measure, and it can only be read if both mechanisms mark the column.
+    meaning when the prompt invokes the skill, where the operator answered in the agent's place.
+    The skill cells of `issue1-skill.toml` are all of that second kind, so the column is true
+    there by construction and only checks that the expansion happened.
 
     **It stays structurally false in the cells without a skill**, and that is deliberate rather
     than made undecidable. What it states is a fact about the session - no skill body entered it -
@@ -530,9 +699,9 @@ def skill_invoked(run: Assay) -> Metric:
 
     if reads:
         return Metric(True, " ; ".join(sorted(reads)))
-    # Both halves of the question, in the reason: without the first one, a `-force` cell whose
-    # expansion had stopped working would read "the agent did not open the skill" instead of "the
-    # prompt did not carry it".
+    # Both halves of the question, in the reason: without the first one, a cell whose prompt invokes
+    # the skill and whose expansion had stopped working would read "the agent did not open the
+    # skill" instead of "the prompt did not carry it".
     return Metric(
         False,
         f"no skill expanded in the prompt, and no {SKILL_MD} read "

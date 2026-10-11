@@ -1,9 +1,12 @@
 # trysquare-starter
 
-Everything needed to replay one experiment of the course, `issue1-context`, in an environment you
-throw away afterwards: the context levers of module 2.1 measured against the bounce of issue #1 of
-NEON, eleven configurations: one lever at a time, two of them again without the project's history,
-then four stacks.
+Everything needed to replay two experiments of the course in an environment you throw away
+afterwards, both measured against the bounce of issue #1 of NEON:
+
+- `issue1-context`, the context levers of module 2.1, in nine configurations: one lever at a time,
+  two of them again without the project's history, then two stacks;
+- `issue1-skill`, the two playtester skills of module 2.1, in three configurations: the careless
+  request alone, then with `playtester`, then with `dynamic-playtester`.
 
 The repository does not contain the measuring tool. [trysquare](https://github.com/AI-for-dev/trysquare)
 is a Python package installed in a local venv; what lives here is the material of the experiment,
@@ -20,7 +23,7 @@ measuring, and the validator that scores.
 | `pi` | the harness being measured, installed from [pi.dev](https://pi.dev) |
 | `docker` | each run executes in its own container, from the image the scenario names |
 | a model provider | declared in `models.json` at the root of this repository, its key in `.env` |
-| network access | GitHub for NEON and the extension, TestPyPI and PyPI for the installation, the provider for the calls |
+| network access | GitHub for NEON and the pi-web-access extension, npm for its dependencies, TestPyPI and PyPI for the installation, the provider for the calls, and Exa's MCP server for the web searches of `dynamic-playtester` |
 
 ### Install pi
 
@@ -65,9 +68,10 @@ Then, from the root of this repository:
 uv sync
 ```
 
-This creates `.venv`, installs trysquare and its dependencies, and writes `uv.lock`. The scenario
-needs trysquare 0.8.0 or later, the first version that reads `[presets]` and the `exclude` and
-`include` keys of `[axes]`, and `pyproject.toml` says so. That lock file
+This creates `.venv`, installs trysquare and its dependencies, and writes `uv.lock`. The scenarios
+need trysquare 0.12.0 or later, the first version that loads a skill from its copy in the clone,
+loads an extension in the sessions the agent starts itself (`session = "nested"`), and archives
+what a skill wrote beside itself. `pyproject.toml` says so. That lock file
 is what makes a measurement repeatable: the scenario pins the measured repo by a tag, but nothing
 pins trysquare itself, and a harness that does not pin itself measures the operator. Version the
 lock file.
@@ -103,6 +107,8 @@ uv run trysquare run scenarios/issue1-context.toml --output results --repetition
 uv run trysquare run scenarios/issue1-context.toml --output results
 ```
 
+`scenarios/issue1-skill.toml` runs the same way.
+
 The first one prints the full plan without spending anything. The second is a smoke pass, enough to
 see the spread; the number of repetitions goes into the name of the output directory, so it cannot
 be confused with the real matrix. The third runs the matrix as the scenario declares it, 20
@@ -133,20 +139,22 @@ bounded to one CPU and 4 GB, and names the two files the containers get their pr
 enter a container: trysquare hands it a placeholder and swaps in the real key on a relay running
 on the host. `.env` is personal and stays out of git.
 
-The image is built once, from the `image/Dockerfile` of the trysquare repository:
+The agent runs in the official pi image, which the scenarios name in `[agent] image` by its
+dated tag and its digest, because the tools in the container are the agent's tools. trysquare
+pulls nothing on a run's behalf, so pull it once:
 
 ```bash
-docker build -t trysquare-agent image/
+docker pull docker.io/sbx/pi-image:20261011-358a89d1cda7f47b37a5a4b60b2ce63be4eab818@sha256:17f24a8c99653df1d325f4ce684c349c861b15c513de7337dde7cf54e95f2a13
 ```
-
-The scenario names it in `[agent] image`, because the tools in the container are the agent's tools.
 
 Everything else `trysquare.toml` could carry, from `workdir` to `concurrency`, already has the
 value this experiment wants built into the tool.
 
 ## Where to change the model and the concurrency
 
-Both live in `scenarios/issue1-context.toml`, and nowhere else.
+Both live in the scenario, `scenarios/issue1-context.toml` and `scenarios/issue1-skill.toml`, and
+nowhere else. Change the two files together: the skill matrix is read next to the context one, and
+two different models would make that reading meaningless.
 
 The provider and the model are in the `[agent]` table:
 
@@ -185,8 +193,9 @@ one says something, so the values that run are the ones above.
 
 ## The cost
 
-Twenty repetitions over eleven configurations make 220 runs. At 5 at a time with a 1800 s timeout,
-`--dry-run` bounds the matrix at 22 hours, plus the tokens that go with them; runs that finish
+Twenty repetitions over nine configurations make 180 runs for `issue1-context`, and over three
+configurations 60 runs for `issue1-skill`. At 5 at a time with a 1800 s timeout, `--dry-run`
+bounds them at 18 and 6 hours, plus the tokens that go with them; runs that finish
 before the timeout bring it down, and a provider that takes more concurrency does too. Start with
 `--dry-run`, which spends nothing, then with `--repetitions 3`.
 
@@ -199,7 +208,7 @@ trysquare-starter/
   models.json        the providers and models the containers can reach
   .env.example       the names of the keys `models.json` expects
   .env               your provider keys, copied from `.env.example`, not versioned
-  scenarios/         the experiment, in one self contained TOML file
+  scenarios/         the two experiments, each in one self contained TOML file
   hypotheses/        what is predicted, written before measuring
   materials/         prompts, AGENTS.md, system prompt, skill, probe
   validators/        what scores
@@ -211,24 +220,37 @@ piece.
 
 ## The experiment
 
-Eleven configurations, including a `nothing / no` base that declares no delta and reproduces what
-somebody does on day one: the careless request, no rules file, no reasoning budget, the agent's own
-system prompt, the project's history in reach. Each lever is declared once as a preset. A grid
-crosses the five single levers with `blind`, which hides the git history and deletes `ISSUES.md`;
-`exclude` keeps `blind` only for `thinking` and `well_crafted`, and `include` adds the four stacks.
-`scenarios/issue1-context.toml` says in a comment why each one is there.
+`issue1-context` has nine configurations, including a `nothing / no` base that declares no delta and
+reproduces what somebody does on day one: the careless request, no `AGENTS.md`, no reasoning
+budget, the agent's own system prompt, the project's history in reach. Each lever is declared once
+as a preset. A grid crosses the five single levers with `blind`, which hides the git history and
+deletes `ISSUES.md`; `exclude` keeps `blind` only for `thinking` and `well_crafted`, and `include`
+adds the two stacks. `scenarios/issue1-context.toml` says in a comment why each one is there.
 
-The criterion is `bounce_bricks`, and it is a probe rather than a pattern in the diff:
+`issue1-skill` measures the two playtester skills of the course against the careless request
+alone, with `ISSUES.md` and the history removed from every cell. Both skills turn the symptom into
+red tests without fixing the game: `playtester` from a catalogue of breakout bugs written in its
+`SKILL.md`, `dynamic-playtester` from a catalogue it builds by web search, in a nested `pi -p`
+session that loads the pi-web-access extension. Since these cells produce tests rather than a
+fix, the scenario judges the tests: the agent's test files run against the etalon, a complete
+correction (`validators/reference-fix.js`) and five corrections that each lack one part of it,
+and its criterion is `detects_axis`, a test that catches a correction flipping `vy` on every
+face.
+
+The criterion of `issue1-context` is `bounce_bricks`, and it is a probe rather than a pattern in
+the diff:
 `materials/provided-probe/probe.test.js` places a ball already overlapping a brick, calls `frame()`,
 and watches which component of the speed flips. What issue #1 asks for is a behaviour, which the
 probe executes, where a pattern looked for in the diff would depend on how the agent wrote its
 correction.
 
-The validator returns twelve metrics, which the scenario declares one by one. A metric that is
+The validator returns twenty metrics, and each scenario declares the ones it reads: eleven for
+`issue1-context`, nineteen for `issue1-skill`. A metric that is
 declared but missing from the validator does not cost the matrix: it makes the validator fail, the
 run is kept, and `replay --rescore` scores it again without spending a token.
 
-Its tests run offline and need no model:
+Its tests need no model. Most run offline; those that run the reference trees clone NEON at its
+etalon and need `git`, network access and `node`, and are skipped without them:
 
 ```bash
 cd validators && uv run --project .. python -m unittest test_issue1

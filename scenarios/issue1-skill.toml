@@ -1,0 +1,164 @@
+# The two playtester skills of module 2.1, measured on issue #1.
+#
+# Both skills come from the course, `scripts/skills/` of hands-on-harness, translated into
+# English in `materials/skills/`. They do the same thing - turn the reported symptom into red tests, without
+# fixing the game - from two catalogues of known breakout bugs: `playtester` carries one written
+# by hand in its `SKILL.md`, `dynamic-playtester` builds one by web search in a separate `pi -p`
+# session, run by its own script.
+#
+# Three cells: the base, and each skill invoked by name on the same careless request.
+#
+# What is measured is the tests, not the fix. The agent's test files are run against reference
+# trees - the etalon, the complete correction, and five corrections that each lack one part of
+# it - and a test that passes on the correction and fails on a variant detects that defect.
+# `validators/issue1.py` says how, under "The agent's tests, judged against reference trees".
+#
+# The companion of `issue1-context.toml`: same task, agent and protocol. The base is not its base,
+# though: here no cell can read `ISSUES.md`, which describes the edge cases the tests are judged
+# on.
+
+[scenario]
+name = "issue1-skill"
+title = "playtester against dynamic-playtester, on the bounce of issue #1"
+# No hypothesis yet: write one in `hypotheses/` before the first real run, and name it here.
+
+[task]
+repo = "neon"
+# The same tag as `issue1-context.toml`, for the same reason: a tag, cloned, never the working
+# tree, so that measurements compare from one day to the next.
+etalon = "etalon-v1"
+prompt = "../materials/issue1-simple-prompt.md"
+# Every cell runs without `ISSUES.md` and without the history, as the course asks of the skills.
+# `ISSUES.md` spells out the edge cases of issue #1, which are exactly what the tests are judged
+# on: a cell that could read it would be scored on what it copied. The history goes after the
+# script, so nothing it deleted can be read back with `git show`.
+setup = "../materials/remove-issues-md.sh"
+history = false
+
+[agent]
+# The same agent as `issue1-context.toml`: change both files together.
+provider = "my-provider"
+model = "my-model"
+
+# Always declared, never inherited, as in `issue1-context.toml`.
+thinking = "off"
+
+# The same image as `issue1-context.toml`, which says why it is written out.
+image = "docker.io/sbx/pi-image:20261011-358a89d1cda7f47b37a5a4b60b2ce63be4eab818@sha256:17f24a8c99653df1d325f4ce684c349c861b15c513de7337dde7cf54e95f2a13"
+
+[protocol]
+# The same protocol as `issue1-context.toml`, declared in advance and never rerun "just to see".
+# `dynamic-playtester` builds its catalogue inside the run, which the course says can take
+# several minutes: that time comes out of the same timeout.
+repetitions = 20
+concurrency = 5
+timeout = 1800
+attempts = 5
+
+# --- Levers ----------------------------------------------------------------
+
+# The careless request, prefixed with `/skill:playtester`. pi pastes the whole `SKILL.md` into the
+# first message, catalogue included.
+[presets.playtester]
+prompt = "../materials/issue1-simple-prompt-with-playtester.md"
+harness = ["skills-playtester"]
+
+# The careless request, prefixed with `/skill:dynamic-playtester`. The skill has no catalogue to
+# start with, so its first step runs `scripts/catalogue.sh`, which starts a nested `pi -p` session
+# with the web search of `web-access`.
+[presets.dynamic_playtester]
+prompt = "../materials/issue1-simple-prompt-with-dynamic-playtester.md"
+harness = ["skills-dynamic-playtester", "web-access"]
+
+# --- Cells -----------------------------------------------------------------
+#
+# `nothing` is the base: the careless request alone. Each skill is read against it, and the two
+# skills against each other, since they differ only by their catalogue and how it is obtained.
+
+[axes]
+lever = ["nothing", "playtester", "dynamic_playtester"]
+
+# --- Harness bricks --------------------------------------------------------
+
+# Nothing to pin for the two skills: they are versioned in this repository, so noting the revision
+# of this repository next to a matrix pins them. trysquare loads each one from its copy in the
+# clone, which is writable and belongs to the run: the catalogue `dynamic-playtester` writes there
+# never reaches the next run, and trysquare archives it.
+[harness.skills-playtester]
+kind = "skills"
+paths = ["../materials/skills/playtester"]
+
+[harness.skills-dynamic-playtester]
+kind = "skills"
+paths = ["../materials/skills/dynamic-playtester"]
+
+# The web tools of pi-web-access (`web_search`, `fetch_content`), for the nested session that
+# `catalogue.sh` starts, and not for the agent itself: `session = "nested"` writes the extension
+# into the settings of the container's home, which the main session ignores (`-ne`) and the nested
+# one reads. Pinned by its release tag; trysquare installs its npm dependencies when it clones it.
+#
+# Nothing configures it: the container starts with an empty home, so there is no
+# `~/.pi/agent/web-search.json` and no search API key. The extension then runs on its defaults,
+# which means a keyless search through Exa's MCP server, reached from the container.
+#
+# The nested session runs `pi -p --no-session`: its searches, its tokens and its cost appear
+# nowhere in the archive, so the cost of the `dynamic_playtester` cell is under-counted.
+[harness.web-access]
+repo = "webaccess"
+tag = "v0.38.0"
+session = "nested"
+
+# --- Validation ------------------------------------------------------------
+
+[[validation]]
+mode = "script"
+command = "../validators/issue1.py"
+metrics = [
+  # mechanical: did the agent modify at least one file?
+  "delivered",
+  # process: did the agent run `npm test` himself? The skills ask him to run each test alone.
+  "suite_run",
+  # process: did the body of a `SKILL.md` enter the context? The prompt invokes the skill with
+  # `/skill:`, which pi expands client side, so the column is true in the skill cells by
+  # construction and only checks that the expansion happened. False in the base: it is a fact
+  # about the session.
+  "skill_invoked",
+  # process: did `dynamic-playtester` write a catalogue, and with how many entries? Not
+  # applicable in the two other cells.
+  "catalogue_built",
+  # the scope the ticket puts within reach (`game/neon.js` and `game/neon.test.js`), and the list
+  # of files touched, which explains a false `in_scope`
+  "in_scope",
+  "touched",
+  # the test cases added to `game/neon.test.js`, counted against the six of the etalon
+  "tests_added",
+  # The agent's tests against the reference trees. `tests_sound`: none of them fails on the
+  # complete correction. `tests_red`: one of them, sound, fails on the etalon.
+  "tests_sound",
+  "tests_red",
+  # Each defect a sound test catches: the wrong axis, the corner, the ball left inside the brick,
+  # the seam between two bricks, tunneling.
+  "detects_axis",
+  "detects_corner",
+  "detects_exit",
+  "detects_neighbors",
+  "detects_tunneling",
+  # The probe on the agent's own tree. The skills tell the agent not to fix the game, but the
+  # request says "Fix that": these columns say which of the two won.
+  "bounce_bricks",
+  "bounce_corners",
+  "bounce_exit",
+  "bounce_neighbors",
+  "bounce_tunneling",
+]
+
+# --- Verdict ---------------------------------------------------------------
+
+[verdict]
+# The hard half of issue #1 is the per-face bounce: a side impact flips `vx`. A test suite that
+# catches a correction flipping `vy` on every face has understood it.
+criterion = "detects_axis"
+reference = "nothing"
+# A run that modified no file wrote no test. A red suite is the expected result of these skills,
+# so it is not a validity condition.
+validity = ["delivered"]

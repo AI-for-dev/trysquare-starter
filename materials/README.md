@@ -11,19 +11,29 @@ rather than rewriting this one.
 | --- | --- |
 | `issue1-simple-prompt.md` | the base task: a real but careless request |
 | `issue1-well-crafted-prompt.md` | the same work, asked for properly, with a pointer to `ISSUES.md` |
-| `issue1-simple-prompt-with-skill.md` | the careless request, plus the invocation of the skill |
+| `issue1-simple-prompt-with-playtester.md` | the careless request, prefixed with `/skill:playtester` |
+| `issue1-simple-prompt-with-dynamic-playtester.md` | the careless request, prefixed with `/skill:dynamic-playtester` |
 | `AGENTS.md` | a project convention, as a permanent context file |
 | `SYSTEM-minimal.md` | the agent's system prompt reduced to three lines |
-| `skills/playtest/` | a skill: play the game before fixing it, and look for the edge cases |
-| `remove-issues-md.sh` | the `setup` script of the `blind` cells: deletes `ISSUES.md` from the clone |
-| `provided-probe/probe.test.js` | the scoring probe, dropped in the tree of the two `add_tests` cells |
+| `skills/playtester/` | a skill from the course: red tests from a catalogue of breakout bugs written by hand |
+| `skills/dynamic-playtester/` | the same procedure, with a catalogue built by web search in a nested `pi -p` session |
+| `remove-issues-md.sh` | the `setup` script of the `blind` cells and of `issue1-skill`: deletes `ISSUES.md` |
+| `provided-probe/probe.test.js` | the scoring probe, dropped in the tree of the `add_tests` cells |
 
 The well crafted prompt does not copy out the bounce mechanism, although `ISSUES.md` details it in
 the measured repo. That restraint is the subject of the cell: what is measured is whether pointing
 at a written document is enough for it to be read, and not whether an agent can apply a hint just
 handed to him.
 
+The two skills come from `scripts/skills/` of
+[hands-on-harness](https://github.com/AI-for-dev/hands-on-harness), at commit `9f48fbc`, translated
+from French into English like the rest of this repository. The translation keeps every rule, URL
+and line of code; the only renames are `references/consignes-catalogue.md`, now
+`references/catalogue-instructions.md`, and the variables of its collection script.
+`dynamic-playtester` ships without
+`references/bugs-arcade.md`: building that catalogue is part of what its cell measures.
+
 The probe is a single file for two jobs: `validators/issue1.py` drops it in a copy of the measured
 tree to score every cell, and the `kind = "files"` brick of the scenario commits it into the clone
-of the two `add_tests` cells before the agent starts. The only line that separates the two uses is
-its import, which the validator rewrites in its copy.
+of the `add_tests` cells before the agent starts. The only thing that separates the two uses
+is its import line, which the validator rewrites in its copy and follows with a guard.

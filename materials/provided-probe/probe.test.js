@@ -1,20 +1,19 @@
 // probe.test.js - the edge cases of issue #1, as executable tests, **handed over in advance**.
 //
 // This file does not exist at the etalon. A `kind = "files"` brick of the scenario drops it in
-// the measured tree before the agent starts, and commits it on the etalon: the cell that
-// receives it therefore begins its work with a red suite and the specification in front of it.
-// That is all this cell measures - does a model that already has the tests it needs correct
+// the measured tree before the agent starts, and commits it on the etalon: the cells that
+// receive it therefore begin their work with a red suite and the specification in front of them.
+// That is all those cells measure - does a model that already has the tests it needs correct
 // itself?
 //
 // ---------------------------------------------------------------------------
 // WHAT IT TAKES FOR THIS FILE TO EVEN RUN
 //
-// It imports `frame` from `./neon.js`, which the module **does not export** today. Until it
-// does, `npm test` fails while loading the module and no case runs. Exporting the render loop
-// is therefore the first thing to do, and it is one line.
+// It imports `frame`, `step` and the other names listed below from `./neon.js`. If one of them
+// is no longer exported, `npm test` fails while loading the module and no case runs.
 // ---------------------------------------------------------------------------
 //
-// Fifteen cases, in six groups. The first four are issue #1, from the coarsest to the finest,
+// Twelve cases, in five groups. The first four are issue #1, from the coarsest to the finest,
 // and each one blackens a form of incomplete correction that the previous one let through:
 //
 //   `brick`     the four faces: the axis that was hit flips, the other one does not move.
@@ -28,9 +27,9 @@
 //               8 px and the ball diameter 14, so every seam of the grid is a double overlap:
 //               it is the common case, not the curiosity.
 //
-// The last two are **other bugs that issue #1 does not mention**, found while writing the cases
-// above. They are here because they live in the same collision detection and because a file of
-// edge cases that kept quiet about them would be lying, not because the ticket asks for them:
+// The last group is **another bug that issue #1 does not mention**, found while writing the cases
+// above. It is here because it lives in the same collision detection and because a file of edge
+// cases that kept quiet about it would be lying, not because the ticket asks for it:
 //
 //   `tunneling` the fast ball jumps over the brick without ever touching it. Detection is
 //               discrete: it samples the position before and after the move, and at level 6
@@ -264,7 +263,7 @@ describe('tunneling', () => {
   });
 });
 
-// The only path by which these tests touch the game: the fifteen cases go through here and none
+// The only path by which these tests touch the game: the twelve cases go through here and none
 // of them calls `frame()` or `step()` itself. Three steps, in this order, and the first one that
 // deflects the ball stops the manoeuvre.
 //
