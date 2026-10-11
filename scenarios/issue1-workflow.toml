@@ -30,9 +30,8 @@ model = "my-model"
 # and trysquare refuses the run when the two differ, because the brick below is named `agents`.
 thinking = "off"
 
-# The agent's tools belong to the experiment, not to the machine, so the image is declared here.
-# Built once from trysquare's `image/Dockerfile`: `docker build -t trysquare-agent image/`.
-image = "trysquare-agent"
+# The same image as `issue1-context.toml`, which says why it is written out.
+image = "docker.io/sbx/pi-image:20261011-358a89d1cda7f47b37a5a4b60b2ce63be4eab818@sha256:17f24a8c99653df1d325f4ce684c349c861b15c513de7337dde7cf54e95f2a13"
 
 [protocol]
 repetitions = 20
@@ -100,13 +99,17 @@ kind = "files"
 
 # --- Validation ------------------------------------------------------------
 
-# The validator of `issue1-context`, unchanged. It returns more metrics than this list, and the
-# ones left out do not apply here:
+# The validator of `issue1-context` and `issue1-skill`. It returns more metrics than this list, and
+# the ones left out do not apply here:
 #
-# - `suite_run` and `skill_invoked` read the main session. In the `flow` cell that session holds
-#   only the `/run`, and the suite is run by the flow's `check` nodes, so `suite_run` would be
-#   false in every run of the cell for a reason that says nothing about the work.
+# - `suite_run`, `skill_invoked` and `catalogue_built` read the main session or a skill. In the
+#   `flow` cell that session holds only the `/run`, and the suite is run by the flow's `check`
+#   nodes, so `suite_run` would be false in every run of the cell for a reason that says nothing
+#   about the work.
 # - `probe_intact` is not applicable without the `add_tests` brick.
+# - `tests_sound`, `tests_red` and the `detects_*` columns judge the agent's tests against
+#   reference trees. They were added after the hypothesis was frozen, so they are not declared
+#   here; declaring them would add columns, not change a prediction.
 [[validation]]
 mode = "script"
 command = "../validators/issue1.py"
@@ -130,5 +133,5 @@ metrics = [
 criterion = "bounce_bricks"
 reference = "single"
 # Same reasoning as `issue1-context`: a red suite is a result for this task, not an inability to
-# judge, so `tests` is not a validity condition. A run that modified no file did not work.
+# judge, so a green suite is not a validity condition. A run that modified no file did not work.
 validity = ["delivered"]
