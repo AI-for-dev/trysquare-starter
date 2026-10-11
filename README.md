@@ -249,7 +249,8 @@ The validator returns twenty metrics, and each scenario declares the ones it rea
 declared but missing from the validator does not cost the matrix: it makes the validator fail, the
 run is kept, and `replay --rescore` scores it again without spending a token.
 
-Its tests run offline and need no model:
+Its tests need no model. Most run offline; those that run the reference trees clone NEON at its
+etalon and need `git`, network access and `node`, and are skipped without them:
 
 ```bash
 cd validators && uv run --project .. python -m unittest test_issue1

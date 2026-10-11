@@ -11,10 +11,11 @@ One test on the **material** comes on top: the probe is a single file for its tw
 that rewrite are guarded here, because an anchor that no longer bites returns an uncorrected
 probe - an unexported `frame` would then read as a missing correction, over a whole campaign.
 
-The **reference trees** are covered against real code: the etalon of NEON is copied in
-`fixtures/neon-etalon-v1/`, and the probe, run as if the agent had written it, must fail exactly
-the defect of each variant. `test_quality` and `catalogue_built` are covered the same way. These
-tests need `node`, and are skipped without it.
+The **reference trees** are covered against real code: the etalon of NEON is cloned once, from
+the URL of `trysquare.toml` at the tag the scenario names, and the probe, run as if the agent had
+written it, must fail exactly the defect of each variant. `test_quality` is covered the same way.
+These tests need `git`, network access to the repository and `node`; without them they are
+skipped, and every other test still runs offline.
 
 What is not covered yet: the scoring of the probe on an agent's tree, `tests_added`, `in_scope`.
 
@@ -360,10 +361,31 @@ class TestTheScoringProbe(unittest.TestCase):
         self.assertIn("frame,", str(raised.exception))
 
 
-# The etalon tree, copied from NEON at `etalon-v1` (d62ccd1), so that the reference trees can be
-# built and run offline.
-ETALON_TREE = HERE / "fixtures" / "neon-etalon-v1"
-NODE = shutil.which("node")
+# The etalon, cloned once per test run rather than copied into this repository: a copy would keep
+# passing after the tag moved, while the campaign would run against the new etalon.
+_ETALON: list[Path] = []
+_ETALON_HOME = tempfile.TemporaryDirectory(prefix="issue1-etalon-")
+
+
+def etalon() -> Path:
+    """The tree of the measured repository at its etalon, or a skip saying why it is missing."""
+    if _ETALON:
+        return _ETALON[0]
+    if not shutil.which("node"):
+        raise unittest.SkipTest("node is needed to run the reference trees")
+    url = tomllib.loads((HERE.parent / "trysquare.toml").read_text())["repos"]["neon"]
+    tag = tomllib.loads((SCENARIOS / "issue1-skill.toml").read_text())["task"]["etalon"]
+    root = Path(_ETALON_HOME.name) / "neon"
+    done = subprocess.run(
+        ["git", "clone", "--quiet", "--depth", "1", "--branch", tag, url, str(root)],
+        capture_output=True,
+        text=True,
+    )
+    if done.returncode != 0:
+        raise unittest.SkipTest(f"could not clone {url} at {tag}: {done.stderr.strip()}")
+    shutil.rmtree(root / ".git")
+    _ETALON.append(root)
+    return root
 
 
 def probe_on(root: Path):
@@ -388,14 +410,14 @@ def probe_on(root: Path):
 def agent_tree(tmp: str, tests: str) -> Path:
     """The etalon, with `tests` as the agent's `game/neon.test.js` and the game left unfixed."""
     root = Path(tmp) / "agent"
-    shutil.copytree(ETALON_TREE, root)
+    shutil.copytree(etalon(), root)
     (root / issue1.TEST_FILE).write_text(tests)
     return root
 
 
 def scored(root: Path) -> dict:
     run = Assay.fake(
-        sources_at_etalon=(ETALON_TREE / issue1.SOURCE_FILE).read_text(),
+        sources_at_etalon=(etalon() / issue1.SOURCE_FILE).read_text(),
         given=(),
         probe=probe_on(root),
     )
@@ -423,7 +445,6 @@ test('left face flips vx', () => {
 """
 
 
-@unittest.skipUnless(NODE, "node is needed to run the reference trees")
 class TestTheReferenceTrees(unittest.TestCase):
     """The reference trees are only worth what the probe says of them.
 
@@ -442,15 +463,19 @@ class TestTheReferenceTrees(unittest.TestCase):
         "tunneling": {"brick": 4, "corner": 1, "exit": 4, "neighbors": 2, "tunneling": 0},
     }
 
+    @classmethod
+    def setUpClass(cls):
+        etalon()
+
     def passed(self, variant: str) -> dict[str, int]:
-        etalon = (ETALON_TREE / issue1.SOURCE_FILE).read_text()
+        source = (etalon() / issue1.SOURCE_FILE).read_text()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "tree"
-            shutil.copytree(ETALON_TREE, root)
+            shutil.copytree(etalon(), root)
             shutil.copy(issue1.PROBE, root / issue1.PROBE_FILE)
             answer = probe_on(root)(
                 ["node", "--test", f"--test-reporter={issue1.REPORTER}", "game/**/*.test.js"],
-                {issue1.SOURCE_FILE: issue1.reference_source(etalon, variant)},
+                {issue1.SOURCE_FILE: issue1.reference_source(source, variant)},
                 None,
                 None,
                 60,
@@ -471,14 +496,19 @@ class TestTheReferenceTrees(unittest.TestCase):
     def test_the_wrong_axis_fails_the_side_faces(self):
         self.assertLess(self.passed("axis")["brick"], 4)
 
+
+class TestTheReferenceAnchors(unittest.TestCase):
     def test_a_moved_etalon_raises_instead_of_scoring_sideways(self):
         with self.assertRaises(RuntimeError):
             issue1.reference_source("export function frame() {}\n", "complete")
 
 
-@unittest.skipUnless(NODE, "node is needed to run the reference trees")
 class TestTestQuality(unittest.TestCase):
     """The agent's tests, run for real against the reference trees."""
+
+    @classmethod
+    def setUpClass(cls):
+        etalon()
 
     def test_the_probe_as_the_agents_tests_detects_everything(self):
         with tempfile.TemporaryDirectory() as tmp:
