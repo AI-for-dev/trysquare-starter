@@ -2,7 +2,7 @@
 #
 # This file exists for one reason: a scenario names a repository by a logical name, and only a
 # config file can say what that name points at on this machine. `scenarios/issue1-context.toml`
-# writes `repo = "neon"` and a harness brick writes `repo = "websearch"`, so without these two
+# writes `repo = "neon"` and a harness brick writes `repo = "webaccess"`, so without these two
 # tables a run refuses before it starts.
 #
 # Everything else trysquare would accept here is left out on purpose, because the values this
@@ -22,9 +22,9 @@
 [repos]
 neon = "https://github.com/AI-for-dev/neon.git"
 
-# The `extension` brick of the scenario cites this repository by its logical name.
+# The `web-access` brick of the scenario cites this repository by its logical name.
 [harness]
-websearch = "https://github.com/sebaxzero/pi-safe-search"
+webaccess = "https://github.com/nicobailon/pi-web-access"
 
 # Each run executes in its own container, from the image the scenario declares in `[agent] image`.
 # The provider key never enters the container: trysquare reads it from your `models.json`, hands

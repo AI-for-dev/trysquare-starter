@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """Tests of the issue #1 validator, being rebuilt just like the validator itself.
 
-What is covered here: `skill_invoked` and `probe_intact`, which entered with these tests, and the
-**contract of the metrics** - every name a scenario declares is indeed produced, checked by
-calling the validator rather than by rereading its text. It is the only omission of the lot that
-is discovered only after spending a matrix.
+What is covered here: `suite_run`, `skill_invoked` and `probe_intact`, which entered with these
+tests, and the **contract of the metrics** - every name a scenario declares is indeed produced,
+checked by calling the validator rather than by rereading its text. It is the only omission of
+the lot that is discovered only after spending a matrix.
 
 One test on the **material** comes on top: the probe is a single file for its two jobs, and
-`scoring_probe()` rewrites nothing but its import line. Both anchors of that rewrite are guarded
-here, because an anchor that no longer bites returns an uncorrected probe - an unexported `frame`
-would then read as a missing correction, over a whole campaign.
+`scoring_probe()` rewrites nothing but its import line and the guard after it. Both anchors of
+that rewrite are guarded here, because an anchor that no longer bites returns an uncorrected
+probe - an unexported `frame` would then read as a missing correction, over a whole campaign.
 
-What is not covered yet: the probe and its fixtures, `tests_added`, `in_scope`. They were covered
-by an earlier version of these tests, against real trees, and their rebuild waits for the rebuild
-of the fixtures.
+The **reference trees** are covered against real code: the etalon of NEON is copied in
+`fixtures/neon-etalon-v1/`, and the probe, run as if the agent had written it, must fail exactly
+the defect of each variant. `test_quality` and `catalogue_built` are covered the same way. These
+tests need `node`, and are skipped without it.
+
+What is not covered yet: the scoring of the probe on an agent's tree, `tests_added`, `in_scope`.
 
     cd validators
     uv run --project .. python -m unittest test_issue1 -v
@@ -21,7 +24,10 @@ of the fixtures.
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
+import subprocess
 import tempfile
 import tomllib
 import unittest
@@ -33,11 +39,11 @@ from trysquare.assay import Assay, Metric, ToolCall, report
 HERE = Path(__file__).resolve().parent
 SCENARIOS = HERE.parent / "scenarios"
 
-# The absolute path of the brick, as `--skill` passes it: this is the form in which the agent sees
-# the skill, and therefore the form in which he reads it.
+# The absolute path of the brick, as `--skill` passed it before trysquare 0.12: archives from then
+# are still replayed, and that is the path the agent read in them.
 BRICK = "/tmp/campaign/materials/skills/test-gaps/SKILL.md"
-# The copy trysquare drops in the clone. The same file, another path, and the reason why detection
-# is on the file name and not on the path.
+# The copy trysquare drops in the clone, which `--skill` points at since 0.12. The same file,
+# another path, and the reason why detection is on the file name and not on the path.
 COPY = ".pi/skills/test-gaps/SKILL.md"
 
 
@@ -126,9 +132,8 @@ class TestSkillInvoked(unittest.TestCase):
     And it counts **both** mechanisms by which that body arrives, because they leave opposite
     traces: loaded by its name, the agent has to read the `SKILL.md` himself, which is a tool call;
     referenced by `/skill:<name>` in the prompt, it is expanded client side and there is nothing
-    left to read. Counting only the first one made the five runs of
-    `well crafted stack +skill-tie-3-force` false although the body was in their prompt from
-    beginning to end.
+    left to read. Counting only the first one makes the column false on runs whose prompt carried
+    the whole body from beginning to end.
     """
 
     def invoked(self, *calls: ToolCall, expanded: tuple[str, ...] = ()) -> Metric:
@@ -140,7 +145,7 @@ class TestSkillInvoked(unittest.TestCase):
         self.assertTrue(self.invoked(read(BRICK)))
 
     def test_a_skill_expanded_in_the_prompt_counts_without_any_call(self):
-        """The `-force` case, and the one that was missing. `/skill:tie-cases-3` gets the whole
+        """A prompt that invokes the skill. `/skill:tie-cases-3` gets the whole
         `SKILL.md` pasted into the first message: the body is there before the agent moves, so he
         has no reason to read it and reads none. The reason names the skill, otherwise the green
         column would not say which one."""
@@ -171,9 +176,9 @@ class TestSkillInvoked(unittest.TestCase):
         open it. Both return false, and that is what the scenario accepts: the reason is a fact
         about the session, true in both cases.
 
-        It names **both** halves of the question, otherwise a `-force` cell whose expansion had
-        stopped working would read "the agent did not open the skill" instead of "the prompt did
-        not carry it"."""
+        It names **both** halves of the question, otherwise a cell whose prompt invokes the skill
+        and whose expansion had stopped working would read "the agent did not open the skill"
+        instead of "the prompt did not carry it"."""
         metric = self.invoked(read("game/neon.js"), shell("npm test"))
         self.assertFalse(metric)
         self.assertIn("2 tool calls", metric.reason)
@@ -212,7 +217,7 @@ class TestSkillInvoked(unittest.TestCase):
 
     def test_a_base_without_expansion_keeps_quiet_instead_of_counting_half(self):
         """A base older than `skills_expanded` can only answer half the question, and half an
-        answer is exactly the flaw that was just fixed: every `-force` cell would come out false.
+        answer would make every cell whose prompt invokes the skill come out false.
         Keeping quiet shrinks the denominator visibly instead of publishing a column whose reading
         is wrong."""
         metric = issue1.skill_invoked(Assay.fake(tool_calls=(read("game/neon.js"),)))
@@ -222,7 +227,7 @@ class TestSkillInvoked(unittest.TestCase):
 class TestProbeIntact(unittest.TestCase):
     """Is the test given to the agent still the one that was given?
 
-    The `+probe` cell hands the agent the test that judges him, which opens the answer that costs
+    The `add_tests` cells hand the agent the test that judges him, which opens the answer that costs
     nothing: loosen the assertion. The scoring is not fooled, it rewrites its own copy, so this
     column protects nothing, it separates two green runs that did not do the same thing.
     """
@@ -274,10 +279,10 @@ class TestTheScoringProbe(unittest.TestCase):
     """The probe as the agent reads it, and the same one as it scores.
 
     A single file holds both jobs, and `scoring_probe()` rewrites its import line for the scoring.
-    This is not cosmetic: without that rewrite, a correction left inside `frame()` - where the
-    comment in the repo sends it - does not even link, and the six columns fall silent together on
-    a correct run. With a rewrite that no longer bites because the source moved, it is worse: it
-    falls silent without saying so.
+    This is not cosmetic: without that rewrite, a correct fix from an agent who dropped the
+    `export` of `frame()` does not even link, and the five columns fall silent together on it.
+    With a rewrite that no longer bites because the source moved, it is worse: it falls silent
+    without saying so.
     """
 
     # `paddle` was removed from the probe and from `GROUPS` after the n20 campaign: this test
@@ -309,7 +314,7 @@ class TestTheScoringProbe(unittest.TestCase):
     def test_the_source_imports_frame_directly_and_not_the_harness_name(self):
         """`internalFrame` is the alias the validator adds to `game/neon.js` itself. A source that
         named it would make the agent write that name, and the second export would be a duplicate:
-        the module would no longer compile, in the only cell that reads the probe."""
+        the module would no longer compile, in the cells that read the probe."""
         source = issue1.PROBE.read_text()
         self.assertNotIn("internalFrame", source)
         self.assertEqual(source.count(issue1.SOURCE_IMPORT), 1)
@@ -328,7 +333,7 @@ class TestTheScoringProbe(unittest.TestCase):
         self.assertIn(issue1.GUARD.strip(), scoring)
 
     def test_the_scoring_changes_no_case(self):
-        """The cell that receives the brick must be scored on what it read, otherwise it measures
+        """The cells that receive the brick must be scored on what they read, otherwise it measures
         "does the agent guess a second scale" instead of "does he correct himself"."""
         self.assertEqual(
             self.cases(issue1.PROBE.read_text()),
@@ -355,6 +360,229 @@ class TestTheScoringProbe(unittest.TestCase):
         self.assertIn("frame,", str(raised.exception))
 
 
+# The etalon tree, copied from NEON at `etalon-v1` (d62ccd1), so that the reference trees can be
+# built and run offline.
+ETALON_TREE = HERE / "fixtures" / "neon-etalon-v1"
+NODE = shutil.which("node")
+
+
+def probe_on(root: Path):
+    """What `run.probe` does, on a tree of this machine: copy, drop, write, run, read the JSON."""
+
+    def run(command, write, append, drop, timeout):
+        with tempfile.TemporaryDirectory() as where:
+            tree = Path(where) / "tree"
+            shutil.copytree(root, tree)
+            for victim in tree.rglob(drop) if drop else []:
+                victim.unlink()
+            for name, text in (write or {}).items():
+                (tree / name).write_text(text)
+            for name, text in (append or {}).items():
+                (tree / name).write_text((tree / name).read_text() + text)
+            done = subprocess.run(command, cwd=tree, capture_output=True, text=True, timeout=60)
+            return json.loads(done.stdout)
+
+    return run
+
+
+def agent_tree(tmp: str, tests: str) -> Path:
+    """The etalon, with `tests` as the agent's `game/neon.test.js` and the game left unfixed."""
+    root = Path(tmp) / "agent"
+    shutil.copytree(ETALON_TREE, root)
+    (root / issue1.TEST_FILE).write_text(tests)
+    return root
+
+
+def scored(root: Path) -> dict:
+    run = Assay.fake(
+        sources_at_etalon=(ETALON_TREE / issue1.SOURCE_FILE).read_text(),
+        given=(),
+        probe=probe_on(root),
+    )
+    return report(issue1.test_quality(run))
+
+
+# One face of the brick, written the way the skills ask: a precondition on the contact, then the
+# invariant. It catches the wrong axis and nothing else.
+LEFT_FACE = """
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { frame, createState, BRICK_W, BRICK_H, BALL_R } from './neon.js';
+
+const ctx = new Proxy({}, { get: () => () => {} });
+
+test('left face flips vx', () => {
+  const state = createState(1);
+  state.bricks = [{ x: 100, y: 100, w: BRICK_W, h: BRICK_H, row: 0, alive: true, points: 10 }];
+  state.ball = { x: 96, y: 110, r: BALL_R, vx: 300, vy: 30 };
+  assert.ok(state.ball.x + state.ball.r > 100);
+  frame(ctx, state);
+  assert.ok(state.ball.vx < 0);
+  assert.ok(state.ball.vy > 0);
+});
+"""
+
+
+@unittest.skipUnless(NODE, "node is needed to run the reference trees")
+class TestTheReferenceTrees(unittest.TestCase):
+    """The reference trees are only worth what the probe says of them.
+
+    The probe is the best test suite there is for issue #1, so it is run here as if the agent had
+    written it: it must pass everything on the complete correction, fail everything on the etalon,
+    and fail exactly the group of each defect on its variant. The etalon's own six tests must pass
+    everywhere, since the correction touches nothing they test.
+    """
+
+    EXPECTED = {
+        "complete": {"brick": 4, "corner": 1, "exit": 4, "neighbors": 2, "tunneling": 1},
+        "etalon": {"brick": 0, "corner": 0, "exit": 0, "neighbors": 0, "tunneling": 0},
+        "corner": {"brick": 4, "corner": 0, "exit": 4, "neighbors": 2, "tunneling": 1},
+        "exit": {"brick": 4, "corner": 1, "exit": 0, "neighbors": 2, "tunneling": 1},
+        "neighbors": {"brick": 4, "corner": 1, "exit": 4, "neighbors": 0, "tunneling": 1},
+        "tunneling": {"brick": 4, "corner": 1, "exit": 4, "neighbors": 2, "tunneling": 0},
+    }
+
+    def passed(self, variant: str) -> dict[str, int]:
+        etalon = (ETALON_TREE / issue1.SOURCE_FILE).read_text()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "tree"
+            shutil.copytree(ETALON_TREE, root)
+            shutil.copy(issue1.PROBE, root / issue1.PROBE_FILE)
+            answer = probe_on(root)(
+                ["node", "--test", f"--test-reporter={issue1.REPORTER}", "game/**/*.test.js"],
+                {issue1.SOURCE_FILE: issue1.reference_source(etalon, variant)},
+                None,
+                None,
+                60,
+            )
+        self.assertNotIn("error", answer)
+        counts: dict[str, int] = {}
+        for case in answer["cases"]:
+            counts[case["group"]] = counts.get(case["group"], 0) + case["ok"]
+        return counts
+
+    def test_each_variant_fails_exactly_its_group(self):
+        for variant, expected in self.EXPECTED.items():
+            with self.subTest(variant=variant):
+                counts = self.passed(variant)
+                self.assertEqual(counts.pop("", None), 6, "the etalon's own tests")
+                self.assertEqual(counts, expected)
+
+    def test_the_wrong_axis_fails_the_side_faces(self):
+        self.assertLess(self.passed("axis")["brick"], 4)
+
+    def test_a_moved_etalon_raises_instead_of_scoring_sideways(self):
+        with self.assertRaises(RuntimeError):
+            issue1.reference_source("export function frame() {}\n", "complete")
+
+
+@unittest.skipUnless(NODE, "node is needed to run the reference trees")
+class TestTestQuality(unittest.TestCase):
+    """The agent's tests, run for real against the reference trees."""
+
+    def test_the_probe_as_the_agents_tests_detects_everything(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            returned = scored(agent_tree(tmp, issue1.PROBE.read_text()))
+        for name in issue1.TEST_QUALITY:
+            self.assertTrue(returned["metrics"][name], name)
+
+    def test_one_face_detects_the_wrong_axis_and_nothing_else(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            metrics = scored(agent_tree(tmp, LEFT_FACE))["metrics"]
+        self.assertTrue(metrics["tests_sound"])
+        self.assertTrue(metrics["tests_red"])
+        self.assertTrue(metrics["detects_axis"])
+        for name in ("detects_corner", "detects_exit", "detects_neighbors", "detects_tunneling"):
+            self.assertFalse(metrics[name], name)
+
+    def test_a_test_that_expects_the_wrong_answer_is_not_sound_and_detects_nothing(self):
+        wrong = LEFT_FACE.replace("state.ball.vx < 0", "state.ball.vx > 0")
+        with tempfile.TemporaryDirectory() as tmp:
+            returned = scored(agent_tree(tmp, wrong))
+        self.assertFalse(returned["metrics"]["tests_sound"])
+        self.assertIn("left face flips vx", returned["reasons"]["tests_sound"])
+        self.assertFalse(returned["metrics"]["detects_axis"])
+
+    def test_a_test_importing_a_name_the_etalon_lacks_is_not_judged(self):
+        """Scored false, it would read as tests that detect nothing."""
+        coupled = LEFT_FACE.replace("import { frame,", "import { resolveBricks, frame,")
+        with tempfile.TemporaryDirectory() as tmp:
+            returned = scored(agent_tree(tmp, coupled))
+        for name in issue1.TEST_QUALITY:
+            self.assertIn(name, returned["unjudged"], name)
+        self.assertIn("resolveBricks", returned["unjudged"]["tests_sound"])
+
+
+class TestJudgeTests(unittest.TestCase):
+    """The verdicts alone, from which case passed on which tree."""
+
+    CASE = ("game/neon.test.js", "faces", "left")
+    OTHER = ("game/neon.test.js", "faces", "top")
+
+    def played(self, **failing: tuple) -> dict:
+        trees = ("complete", "etalon", *issue1.DEFECTS)
+        return {
+            tree: {case: case not in failing.get(tree, ()) for case in (self.CASE, self.OTHER)}
+            for tree in trees
+        }
+
+    def test_a_case_that_fails_on_the_correction_detects_nothing(self):
+        metrics = issue1.judge_tests(
+            self.played(complete=(self.CASE,), etalon=(self.CASE,), axis=(self.CASE,))
+        )
+        self.assertFalse(metrics["tests_sound"])
+        self.assertFalse(metrics["tests_red"])
+        self.assertFalse(metrics["detects_axis"])
+
+    def test_a_sound_case_that_fails_on_a_variant_detects_it(self):
+        metrics = issue1.judge_tests(self.played(etalon=(self.CASE,), exit=(self.CASE,)))
+        self.assertTrue(metrics["tests_sound"])
+        self.assertTrue(metrics["tests_red"])
+        self.assertTrue(metrics["detects_exit"])
+        self.assertFalse(metrics["detects_corner"])
+        self.assertIn("faces > left", metrics["detects_exit"].reason)
+
+
+class TestCatalogueBuilt(unittest.TestCase):
+    """The file `dynamic-playtester` wrote beside its skill, as trysquare archived it."""
+
+    def written(self, tmp: str, text: str | None) -> Path:
+        root = Path(tmp)
+        if text is not None:
+            catalogue = root / issue1.DYNAMIC_SKILL / issue1.CATALOGUE
+            catalogue.parent.mkdir(parents=True)
+            catalogue.write_text(text)
+        return root
+
+    def test_entries_are_counted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Assay.fake(
+                skills_expanded=(issue1.DYNAMIC_SKILL,),
+                skills=str(self.written(tmp, "## breakout\n\n#### a\n\n#### b\n")),
+            )
+            metric = issue1.catalogue_built(run)
+        self.assertTrue(metric)
+        self.assertEqual(metric.reason, "2 entries")
+
+    def test_no_file_is_false(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Assay.fake(
+                skills_expanded=(issue1.DYNAMIC_SKILL,), skills=str(self.written(tmp, None))
+            )
+            self.assertFalse(issue1.catalogue_built(run))
+
+    def test_an_empty_catalogue_is_false(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Assay.fake(
+                skills_expanded=(issue1.DYNAMIC_SKILL,), skills=str(self.written(tmp, "## x\n"))
+            )
+            self.assertFalse(issue1.catalogue_built(run))
+
+    def test_another_skill_is_not_applicable(self):
+        metric = issue1.catalogue_built(Assay.fake(skills_expanded=("playtester",)))
+        self.assertIsNone(report({"catalogue_built": metric})["metrics"].get("catalogue_built"))
+
+
 class TestTheMetricContract(unittest.TestCase):
     """What the validator returns, obtained by calling it.
 
@@ -374,8 +602,8 @@ class TestTheMetricContract(unittest.TestCase):
             tool_calls=(read(BRICK),),
             # A cell that loads the skill by its name and goes to read it: the prompt expands
             # none, and that is a measurement and not an absence of measurement. Declaring it is
-            # what makes this test fail the day `skill_invoked` gains a read - which has just
-            # happened, and that is the information we want.
+            # what makes this test fail the day `skill_invoked` gains a read, which is the
+            # information we want.
             skills_expanded=(),
         )
 
@@ -391,18 +619,25 @@ class TestTheMetricContract(unittest.TestCase):
                 self.assertEqual(missing, set(), f"{name.name} declares {missing}")
 
     def test_a_missing_read_never_becomes_a_false(self):
-        """The fake only provides `touched`, so four metrics have nothing to read.
+        """The fake only provides `touched`, so these metrics have nothing to read.
 
         None of them returns false. That is the invariant that counts: a missing measurement and a
         failed measurement are not the same thing, and the denominator shrinks visibly instead of
         recording a failing the agent did not commit.
 
-        The validator no longer has a read that *raises* - `or_unjudged` and the three `except`
-        convert them all - so this test replaces the one that expected an exception: the useful
-        guarantee is not that it refuses, it is what it returns when it cannot judge.
+        The validator has no read that *raises* - `or_unjudged` and the three `except` convert
+        them all - so the useful guarantee is not that it refuses, it is what it returns when it
+        cannot judge.
         """
         returned = report(issue1.evaluate(Assay.fake(touched=frozenset())))
-        for name in ("tests_added", "suite_run", "skill_invoked", "bounce_bricks"):
+        for name in (
+            "tests_added",
+            "suite_run",
+            "skill_invoked",
+            "catalogue_built",
+            "bounce_bricks",
+            "tests_red",
+        ):
             self.assertIn(name, returned["unjudged"], name)
             self.assertIsNone(returned["metrics"].get(name), name)
 

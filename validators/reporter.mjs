@@ -1,21 +1,29 @@
-// reporter.mjs - the reporter that renders the cases of `probe.test.js` as JSON on stdout.
+// reporter.mjs - the reporter that renders a `node --test` run as JSON on stdout.
 //
-// `probe.test.js` is an ordinary test file, run by `node --test` like the suite of the repo, and
-// `node --test` only prints text for humans. Its result therefore has to be translated into what
-// `trysquare` reads, and that happens here, plugged in through `--test-reporter`: the probe
-// writes nothing, prints nothing and knows nothing about this format. All the measuring
+// It serves two runs of `validators/issue1.py`: the probe, `probe.test.js`, against the agent's
+// tree, and the agent's own tests against the reference trees. Both are ordinary test files, run
+// by `node --test` like the suite of the repo, and `node --test` only prints text for humans. Its
+// result therefore has to be translated into what `trysquare` reads, and that happens here,
+// plugged in through `--test-reporter`: the tests write nothing, print nothing and know nothing
+// about this format. All the measuring
 // machinery is on this side, all the domain is on the other.
 //
-// Output: `{"cases": [{"group", "name", "ok", "detail"}, ...]}`, one object per `test()`, with
-// the enclosing `describe()` as its group. `{"error": "..."}` when no case ran at all, which
-// `validators/issue1.py` reads as "I could not judge".
+// Output: `{"cases": [{"file", "suite", "group", "name", "ok", "detail"}, ...], "broken": [...]}`,
+// one case per `test()`. `group` is the enclosing `describe()`, `suite` the whole chain of them,
+// and `file` the test file relative to the directory the run started in, so that `file`, `suite`
+// and `name` together name a case. `broken` lists the files that did not load at all, each with
+// what `node:test` said, and `stderr` then carries the error the files printed. `{"error": "..."}`
+// when no case ran at all, which `validators/issue1.py` reads as "I could not judge".
 //
 // This reporter runs in the parent process, while the tests run in a child. That is what spares
 // the probe from gagging `console.log`: whatever the agent's code prints arrives as `test:stdout`
 // and is dropped here, without the measured file having to deal with it.
 
+import { relative } from 'node:path';
+
 export default async function* report(events) {
   const cases = [];
+  const broken = [];
   // The name of the open `describe`, by nesting level. `test:start` comes before the cases it
   // contains, so the group of a case is whatever is open just above it.
   const groups = [];
@@ -28,17 +36,27 @@ export default async function* report(events) {
         break;
 
       case 'test:pass':
-      case 'test:fail':
-        // The `describe`s and the file itself come through here too: they carry the aggregated
-        // verdict of their children, which is already counted.
-        if (data.details?.type === 'suite' || data.nesting < 1) break;
+      case 'test:fail': {
+        // The `describe`s come through here too: they carry the aggregated verdict of their
+        // children, which is already counted.
+        if (data.details?.type === 'suite') break;
+        const file = data.file ? relative(process.cwd(), data.file) : '';
+        // A file that does not load is reported as one failing test, at the top level, named
+        // after the file. It is not a case: none of its cases ran.
+        if (data.nesting === 0 && data.name === file) {
+          if (type === 'test:fail') broken.push({ file, detail: why(data.details?.error) });
+          break;
+        }
         cases.push({
+          file,
+          suite: groups.slice(0, data.nesting).join(' > '),
           group: groups[data.nesting - 1] || '',
           name: data.name,
           ok: type === 'test:pass',
           detail: why(data.details?.error),
         });
         break;
+      }
 
       case 'test:diagnostic':
         // `t.diagnostic()` arrives after the verdict of the case that emitted it. It carries
@@ -60,7 +78,11 @@ export default async function* report(events) {
   // No case at all: the file could not load. Either a `throw` from the probe because it did not
   // find its grip on the module, or agent code that does not evaluate. Both are said the same
   // way, because in both cases the probe has nothing to say about the correction.
-  yield `${JSON.stringify(cases.length ? { cases } : { error: reason(noise) })}\n`;
+  // `node:test` says nothing about why a file did not load beyond "test failed"; the reason is on
+  // stderr, which is shared by every file, so it is attached once rather than guessed per file.
+  const answer = cases.length ? { cases, broken } : { error: reason(noise) };
+  if (cases.length && broken.length) answer.stderr = reason(noise);
+  yield `${JSON.stringify(answer)}\n`;
 }
 
 // The detail of a case: the message of the assertion as the probe wrote it. An exception that is
