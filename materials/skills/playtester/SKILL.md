@@ -1,108 +1,108 @@
 ---
 name: playtester
-description: Transforme un bug de jouabilité d'un casse-brique (breakout) en tests rouges, à partir du catalogue des bugs connus du genre inclus dans ce skill. À utiliser quand un joueur rapporte un comportement anormal d'un casse-brique.
+description: Turns a gameplay bug of a brick breaker (breakout) into red tests, from the catalogue of the genre's known bugs included in this skill. Use when a player reports abnormal behaviour in a brick breaker.
 ---
 
-# Playtester casse-brique
+# Brick breaker playtester
 
-Un symptôme rapporté par un joueur n'est que le cas visible. Les casse-briques cassent toujours aux mêmes endroits, et corriger le symptôme seul laisse passer ses voisins. Tu pars donc du catalogue ci-dessous, tu gardes les entrées qui vivent dans le même composant que le symptôme, et tu écris un test **rouge** pour chacune. Tu ne corriges pas le jeu.
+A symptom reported by a player is only the visible case. Brick breakers always break in the same places, and fixing the symptom alone lets its neighbours through. So you start from the catalogue below, keep the entries that live in the same component as the symptom, and write a **red** test for each one. You do not fix the game.
 
-## Catalogue des bugs connus
+## Catalogue of known bugs
 
-Chaque ligne est une cause relevée dans des discussions de développeurs. L'invariant est la propriété qu'un casse-brique correct respecte toujours : c'est lui que le test vérifie.
+Each row is a cause found in developer discussions. The invariant is the property a correct brick breaker always respects: it is what the test checks.
 
-### Collision balle-brique
-
-| Bug | Cause | Invariant | Source |
-| --- | --- | --- | --- |
-| Rebond sur le mauvais axe | une seule réponse pour toutes les faces (`vy = -vy`), ou axe déduit de la position du centre de la balle | une face latérale inverse `vx`, une face haute ou basse inverse `vy`, l'autre composante ne change pas | https://stackoverflow.com/questions/1561538 ; https://stackoverflow.com/questions/62994269 |
-| Coin mal résolu | tests des arêtes en `else if` : une seule face est retenue au coin | quand la balle pénètre autant sur les deux axes, les deux composantes s'inversent | https://gamedev.stackexchange.com/questions/70887 |
-| Balle collée dans la brique | la vitesse est inversée sans sortir la balle ; la collision est redétectée au pas suivant et la vitesse ré-inversée | après résolution, la balle est hors de la brique, en contact avec la face touchée | https://learnopengl.com/In-Practice/2D-Game/Collisions/Collision-resolution ; https://gamedev.stackexchange.com/questions/95817 |
-| Double rebond sur la jointure de deux briques | chaque brique répond seule : deux briques touchées dans le même pas inversent deux fois la même composante | deux briques jointives forment une surface continue : un seul rebond par axe et par pas | https://stackoverflow.com/questions/38967446 ; https://github.com/bevyengine/bevy/pull/685 |
-| Traversée à grande vitesse (tunneling) | test discret après déplacement : en un pas, la balle avance de plus que l'épaisseur de la brique plus son diamètre | aucune brique n'est franchie sans être touchée, à toute vitesse atteignable et au `dt` maximal | https://github.com/bevyengine/bevy/issues/1240 ; https://stackoverflow.com/questions/61804245 |
-| Brique détruite qui reste active | la brique n'est pas retirée ou son état n'est pas testé | une brique détruite ne fait plus rebondir la balle et ne rapporte plus de points | https://developer.mozilla.org/en-US/docs/Games/Tutorials/2D_breakout_game_pure_JavaScript/Collision_detection |
-| Rebond et destruction séparés | le rebond écarte la balle avant que la destruction ne teste le contact | un contact produit le rebond et la destruction dans le même traitement | https://forum.gdevelop.io/t/brick-breaker-breakout-collision-problem/32533 |
-
-### Collision balle-raquette
+### Ball-brick collision
 
 | Bug | Cause | Invariant | Source |
 | --- | --- | --- | --- |
-| Balle qui traverse la raquette ou s'y colle par le bord | contact détecté sans repositionner la balle | après contact, la balle est au-dessus de la raquette et repart vers le haut | https://stackoverflow.com/questions/77262029 ; https://stackoverflow.com/questions/63037446 |
-| Balle bloquée à l'horizontale | `vy` n'est pas réinversée, ou l'angle de sortie peut devenir plat | après un rebond sur la raquette, `vy` pointe vers le haut et n'est pas nulle | https://stackoverflow.com/questions/61485421 |
-| Angle de sortie inversé | formule de l'angle écrite avec le mauvais signe | touchée à gauche du centre, la balle repart vers la gauche, et inversement | https://gamedev.stackexchange.com/questions/35134 |
-| Raquette testée trop tard | le test balle-raquette est imbriqué dans le test « la balle a atteint le bas » | le contact avec la raquette est testé à chaque pas | https://stackoverflow.com/questions/41962633 |
+| Bounce on the wrong axis | a single response for every face (`vy = -vy`), or axis deduced from the position of the ball's centre | a side face flips `vx`, a top or bottom face flips `vy`, the other component does not change | https://stackoverflow.com/questions/1561538 ; https://stackoverflow.com/questions/62994269 |
+| Corner resolved wrongly | edge tests in `else if`: only one face is kept at the corner | when the ball penetrates as much on both axes, both components flip | https://gamedev.stackexchange.com/questions/70887 |
+| Ball stuck in the brick | the speed is flipped without taking the ball out; the collision is detected again on the next step and the speed flipped back | after resolution, the ball is outside the brick, in contact with the face it hit | https://learnopengl.com/In-Practice/2D-Game/Collisions/Collision-resolution ; https://gamedev.stackexchange.com/questions/95817 |
+| Double bounce at the seam of two bricks | each brick answers alone: two bricks hit in the same step flip the same component twice | two adjoining bricks form a continuous surface: a single bounce per axis and per step | https://stackoverflow.com/questions/38967446 ; https://github.com/bevyengine/bevy/pull/685 |
+| Crossing at high speed (tunneling) | discrete test after the move: in one step, the ball travels more than the thickness of the brick plus its diameter | no brick is crossed without being hit, at any reachable speed and at the maximum `dt` | https://github.com/bevyengine/bevy/issues/1240 ; https://stackoverflow.com/questions/61804245 |
+| Destroyed brick that stays active | the brick is not removed or its state is not tested | a destroyed brick no longer makes the ball bounce and no longer scores points | https://developer.mozilla.org/en-US/docs/Games/Tutorials/2D_breakout_game_pure_JavaScript/Collision_detection |
+| Bounce and destruction handled apart | the bounce moves the ball away before the destruction tests the contact | a contact produces the bounce and the destruction in the same pass | https://forum.gdevelop.io/t/brick-breaker-breakout-collision-problem/32533 |
 
-### Murs
-
-| Bug | Cause | Invariant | Source |
-| --- | --- | --- | --- |
-| Balle qui vibre contre un mur | rebond déclenché sans tester le sens de la vitesse | le rebond n'a lieu que si la balle va vers le mur ; ensuite la composante pointe vers l'intérieur | https://developer.mozilla.org/en-US/docs/Games/Tutorials/2D_breakout_game_pure_JavaScript/Bounce_off_the_walls ; https://stackoverflow.com/questions/42209048 |
-| Rebond manquant sur un côté | comparaison asymétrique, rayon oublié d'un côté | les murs sont testés avec le bord de la balle (`x - r`, `x + r`, `y - r`) | https://stackoverflow.com/questions/29588091 |
-| Sortie par un mur lors d'un double contact | la boucle s'arrête à la première collision du pas | toutes les collisions d'un même pas sont résolues | https://github.com/bevyengine/bevy/pull/685 |
-| Balle perdue non détectée | test du bas absent, ou remise en jeu défectueuse | sous le bord bas, une vie est perdue et la balle repart de sa position initiale | https://stackoverflow.com/questions/44355463 |
-
-### Pas de temps
+### Ball-paddle collision
 
 | Bug | Cause | Invariant | Source |
 | --- | --- | --- | --- |
-| Vitesse dépendante du framerate | déplacement en pixels par frame | le déplacement vaut vitesse × `dt` | https://stackoverflow.com/questions/16554296 |
-| Norme de la vitesse qui change | vitesse modifiée composante par composante, ou force ajoutée | un rebond change la direction, pas la norme de la vitesse | https://stackoverflow.com/questions/49639346 |
+| Ball that goes through the paddle or sticks to its edge | contact detected without repositioning the ball | after contact, the ball is above the paddle and leaves upwards | https://stackoverflow.com/questions/77262029 ; https://stackoverflow.com/questions/63037446 |
+| Ball stuck horizontal | `vy` is not flipped back, or the exit angle can become flat | after a bounce on the paddle, `vy` points upwards and is not zero | https://stackoverflow.com/questions/61485421 |
+| Exit angle reversed | angle formula written with the wrong sign | hit left of the centre, the ball leaves towards the left, and the other way round | https://gamedev.stackexchange.com/questions/35134 |
+| Paddle tested too late | the ball-paddle test is nested inside the "the ball reached the bottom" test | contact with the paddle is tested at every step | https://stackoverflow.com/questions/41962633 |
 
-### Raquette et entrées
-
-| Bug | Cause | Invariant | Source |
-| --- | --- | --- | --- |
-| Raquette qui sort de l'écran | borne calculée avec la hauteur, ou sur le centre | la position de la raquette reste dans `[0, largeur - largeur de la raquette]` | https://stackoverflow.com/questions/72641246 ; https://stackoverflow.com/questions/22902640 |
-| Raquette qui dérive seule | pas de zone morte sur l'axe analogique | sans entrée, la raquette ne bouge pas | https://stackoverflow.com/questions/75048963 |
-| Raquette saccadée au clavier | déplacement appliqué dans le gestionnaire d'événement, soumis à la répétition des touches | l'état des touches est lu à chaque pas de la boucle | https://stackoverflow.com/questions/64692791 |
-
-### Score et état
+### Walls
 
 | Bug | Cause | Invariant | Source |
 | --- | --- | --- | --- |
-| Brique comptée deux fois | la collision est signalée deux fois pour la même brique | une brique rapporte ses points et décrémente le compteur une seule fois | https://discussions.unity.com/t/is-it-possible-for-oncollisionenter-to-be-called-twice-for-the-same-collision/639691 |
-| Score ou vies remis à zéro au niveau suivant | le changement de niveau réinitialise tout l'état | score et vies survivent au changement de niveau, seuls les briques et le combo repartent | https://agonzalezla.itch.io/brickburst/devlog/720248/v-0115-fix-player-scoring-errors |
-| Combo jamais remis à zéro | remise à zéro oubliée sur les transitions | le combo repart de zéro à la perte de la balle et à chaque nouveau niveau | https://sbox.game/facepunch/breakout/source?file=Game%2FBreakoutGame.cs |
+| Ball that vibrates against a wall | bounce triggered without testing the direction of the speed | the bounce only happens if the ball is moving towards the wall; afterwards the component points inwards | https://developer.mozilla.org/en-US/docs/Games/Tutorials/2D_breakout_game_pure_JavaScript/Bounce_off_the_walls ; https://stackoverflow.com/questions/42209048 |
+| Missing bounce on one side | asymmetric comparison, radius forgotten on one side | the walls are tested against the edge of the ball (`x - r`, `x + r`, `y - r`) | https://stackoverflow.com/questions/29588091 |
+| Exit through a wall on a double contact | the loop stops at the first collision of the step | every collision of a step is resolved | https://github.com/bevyengine/bevy/pull/685 |
+| Lost ball not detected | bottom test missing, or faulty restart | below the bottom edge, a life is lost and the ball restarts from its initial position | https://stackoverflow.com/questions/44355463 |
 
-Si le symptôme ne correspond à aucune section, dis-le et décris l'entrée qui manque (bug, cause, invariant), sans lui attribuer de source.
+### Time step
 
-## 1. Composant
+| Bug | Cause | Invariant | Source |
+| --- | --- | --- | --- |
+| Framerate-dependent speed | movement in pixels per frame | the movement is speed × `dt` | https://stackoverflow.com/questions/16554296 |
+| Speed magnitude that changes | speed changed component by component, or a force added | a bounce changes the direction, not the magnitude of the speed | https://stackoverflow.com/questions/49639346 |
 
-Lis le code du jeu. Trouve la fonction qui produit le symptôme, et note comment un test peut l'atteindre par les fonctions exportées. Note dans quel ordre la boucle du jeu appelle ces fonctions à chaque tour. Si la logique vit dans une fonction de rendu, appelle-la avec un faux contexte de canvas, par exemple `new Proxy({}, { get: () => () => {} })`. Repère aussi la convention d'axes (sens de `y`), et calcule à partir du code les valeurs limites que le jeu peut produire : vitesse maximale de la balle, `dt` plafonné, dimensions de la balle, des briques, de la raquette et de l'écart entre briques. Prends ces limites sur toute la partie (dernier niveau, difficulté maximale), pas seulement au départ. Note ces nombres, les tests s'y référeront.
+### Paddle and input
 
-## 2. Sélection
+| Bug | Cause | Invariant | Source |
+| --- | --- | --- | --- |
+| Paddle that leaves the screen | bound computed with the height, or on the centre | the position of the paddle stays within `[0, width - paddle width]` | https://stackoverflow.com/questions/72641246 ; https://stackoverflow.com/questions/22902640 |
+| Paddle that drifts on its own | no dead zone on the analogue axis | without input, the paddle does not move | https://stackoverflow.com/questions/75048963 |
+| Jerky paddle on the keyboard | movement applied in the event handler, subject to key repeat | the state of the keys is read at every step of the loop | https://stackoverflow.com/questions/64692791 |
 
-Prends dans le catalogue **toutes** les entrées de la section du composant trouvé. Chaque test retenu doit faire agir la fonction trouvée à l'étape 1 sur les objets du symptôme. Il n'appelle une autre fonction exportée que si l'entrée l'exige (un déplacement, par exemple), et seulement après une première passe de la fonction du symptôme, dans l'ordre de la boucle : une correction écrite dans l'une ou l'autre fonction doit être jugée de la même façon. Une entrée qui porte sur un autre objet teste un autre bug : écarte-la. Ces cas viennent du catalogue et non des tickets ou des tests déjà présents dans le dépôt : c'est ce qui rend la démarche valable sur un jeu sans ticket détaillé.
+### Score and state
 
-Écris la liste avant de coder : pour chaque entrée, son invariant et pourquoi elle s'applique ici.
+| Bug | Cause | Invariant | Source |
+| --- | --- | --- | --- |
+| Brick counted twice | the collision is reported twice for the same brick | a brick scores its points and decrements the counter only once | https://discussions.unity.com/t/is-it-possible-for-oncollisionenter-to-be-called-twice-for-the-same-collision/639691 |
+| Score or lives reset at the next level | the level change resets the whole state | score and lives survive the level change, only the bricks and the combo start over | https://agonzalezla.itch.io/brickburst/devlog/720248/v-0115-fix-player-scoring-errors |
+| Combo never reset | reset forgotten on transitions | the combo starts again from zero when the ball is lost and at each new level | https://sbox.game/facepunch/breakout/source?file=Game%2FBreakoutGame.cs |
 
-## 3. Tests rouges, un par un
+If the symptom matches no section, say so and describe the missing entry (bug, cause, invariant), without attributing a source to it.
 
-Ajoute les tests à la fin du fichier de tests existant, un `describe` par entrée retenue, et un `test` par variante (chaque face, chaque axe). L'outil `edit` exige toujours `path`.
+## 1. Component
 
-Écris **un seul test à la fois**, et ne passe au suivant qu'une fois celui-ci rouge pour la bonne raison :
+Read the game's code. Find the function that produces the symptom, and note how a test can reach it through the exported functions. Note in which order the game loop calls these functions at each turn. If the logic lives in a rendering function, call it with a fake canvas context, for example `new Proxy({}, { get: () => () => {} })`. Also find the axis convention (direction of `y`), and compute from the code the limit values the game can produce: maximum speed of the ball, capped `dt`, dimensions of the ball, the bricks, the paddle and the gap between bricks. Take these limits over the whole game (last level, maximum difficulty), not only at the start. Write these numbers down, the tests will refer to them.
 
-1. écris le test. Il commence par une **précondition** : une assertion qui calcule les bords de la balle et de la brique et vérifie qu'ils se chevauchent, ou se chevaucheront pendant le pas. Elle porte sur l'état que tu as écrit à la main, avant tout appel au code du jeu, et rien n'est vérifié entre deux appels : seul le résultat final compte, puisque la correction peut agir à n'importe quelle étape. Un bug « rien ne se passe » ressemble à un montage sans contact ; seule la précondition les distingue ;
-2. en relisant le code actuel, écris en commentaire la valeur que l'assertion de l'invariant va recevoir aujourd'hui ;
-3. `node --check <fichier>`, puis lance ce seul test (`node --test --test-name-pattern "<nom du test>" <fichier>`) ;
-4. le test doit échouer sur l'assertion de l'invariant, avec la valeur prédite. Un échec sur la précondition, une autre valeur ou une autre erreur veut dire que le montage ne teste pas ce que tu crois : corrige-le avant d'aller plus loin. Un test qui passe déjà ne prouve rien.
+## 2. Selection
 
-Chaque test vérifié de cette façon sert de modèle au suivant.
+Take from the catalogue **all** the entries of the section of the component you found. Each test you keep must make the function found in step 1 act on the objects of the symptom. It calls another exported function only if the entry requires it (a move, for example), and only after a first pass of the symptom's function, in the order of the loop: a correction written in either function must be judged the same way. An entry about another object tests another bug: set it aside. These cases come from the catalogue and not from the tickets or the tests already in the repository: that is what makes the approach valid on a game without a detailed ticket.
 
-Un test rouge n'a de valeur que s'il passe une fois le jeu corrigé, quelle que soit la correction raisonnable. Le montage doit donc n'admettre qu'**un seul** résultat correct :
+Write the list before coding: for each entry, its invariant and why it applies here.
 
-- **isolé** : remplace la grille de briques par une ou deux briques écrites à la main, loin des murs et de la raquette. Dans la grille, l'écart entre rangées est souvent plus petit que le diamètre de la balle : elle touche aussi les voisines et le résultat attendu devient ambigu ;
-- **pénétration franche** : la balle entre de 2 ou 3 unités par la face visée et nettement plus sur l'autre axe, pour que la face touchée ne fasse aucun doute. Une balle posée au centre d'une brique n'a pas de face ;
-- **axe témoin** : une vitesse non nulle sur l'axe qui ne doit pas changer, pour qu'une correction qui inverse tout échoue ;
-- **atteignable** : seulement des positions, des vitesses et des dimensions que le jeu peut produire. Cite en commentaire la valeur limite calculée à l'étape 1 et montre que le montage reste en dessous ;
-- **jugé de l'extérieur** : compare les bords de la balle et de la brique par un calcul explicite, et utilise les constantes de direction du jeu. Une fonction du code testé ne peut pas juger ce code.
+## 3. Red tests, one by one
 
-Un coin fait exception à la pénétration franche et à l'axe témoin : une balle qui entre autant sur les deux axes n'a pas de face ni d'axe témoin, et le seul résultat correct est que les deux composantes s'inversent. Ce n'est pas un montage ambigu.
+Add the tests at the end of the existing test file, one `describe` per entry kept, and one `test` per variant (each face, each axis). The `edit` tool always requires `path`.
 
-Avant d'écrire un cas, écris en commentaire la position de départ et le seul résultat qu'accepterait un jeu corrigé. Si tu en vois deux, change le montage. Commente aussi chaque `describe` en une ligne : l'invariant et l'entrée du catalogue.
+Write **a single test at a time**, and only move on to the next once this one is red for the right reason:
 
-## 4. Vérification
+1. write the test. It starts with a **precondition**: an assertion that computes the edges of the ball and of the brick and checks that they overlap, or will overlap during the step. It bears on the state you wrote by hand, before any call to the game's code, and nothing is checked between two calls: only the final result counts, since the correction can act at any stage. A "nothing happens" bug looks like a setup without contact; only the precondition tells them apart;
+2. by rereading the current code, write in a comment the value the invariant's assertion will receive today;
+3. `node --check <file>`, then run this single test (`node --test --test-name-pattern "<test name>" <file>`);
+4. the test must fail on the invariant's assertion, with the predicted value. A failure on the precondition, another value or another error means the setup does not test what you think: fix it before going further. A test that already passes proves nothing.
 
-Lance la commande de test du projet. C'est fini quand chaque entrée retenue a ses tests, que les tests qui existaient avant passent toujours, et que chaque nouveau test échoue sur une `AssertionError`.
+Each test checked this way serves as a model for the next one.
 
-Termine par un tableau : entrée du catalogue, invariant, nom du test, raison de l'échec.
+A red test is only worth something if it passes once the game is fixed, whatever the reasonable correction. The setup must therefore admit **a single** correct result:
+
+- **isolated**: replace the grid of bricks with one or two bricks written by hand, far from the walls and the paddle. In the grid, the gap between rows is often smaller than the ball's diameter: it also touches the neighbours and the expected result becomes ambiguous;
+- **clear penetration**: the ball enters by 2 or 3 units through the targeted face and clearly more on the other axis, so that there is no doubt about the face hit. A ball placed at the centre of a brick has no face;
+- **witness axis**: a non-zero speed on the axis that must not change, so that a correction that flips everything fails;
+- **reachable**: only positions, speeds and dimensions the game can produce. Quote in a comment the limit value computed in step 1 and show that the setup stays below it;
+- **judged from outside**: compare the edges of the ball and of the brick by an explicit computation, and use the game's direction constants. A function of the code under test cannot judge that code.
+
+A corner is an exception to clear penetration and to the witness axis: a ball that enters as much on both axes has no face and no witness axis, and the only correct result is that both components flip. This is not an ambiguous setup.
+
+Before writing a case, write in a comment the starting position and the only result a fixed game would accept. If you see two, change the setup. Also comment each `describe` in one line: the invariant and the catalogue entry.
+
+## 4. Check
+
+Run the project's test command. You are done when each entry kept has its tests, the tests that existed before still pass, and each new test fails on an `AssertionError`.
+
+End with a table: catalogue entry, invariant, test name, reason for the failure.

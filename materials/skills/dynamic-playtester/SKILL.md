@@ -1,57 +1,57 @@
 ---
 name: dynamic-playtester
-description: Transforme un bug de jouabilité d'un jeu d'arcade en tests rouges, à partir d'un catalogue de bugs connus du genre construit par recherche web. À utiliser quand un joueur rapporte un comportement anormal du jeu.
+description: Turns a gameplay bug of an arcade game into red tests, from a catalogue of the genre's known bugs built by web search. Use when a player reports abnormal behaviour in the game.
 ---
 
-# Playtester dynamique
+# Dynamic playtester
 
-Un symptôme rapporté par un joueur n'est que le cas visible. Les jeux d'arcade cassent toujours aux mêmes endroits, et corriger le symptôme seul laisse passer ses voisins. Tu pars donc des bugs connus du genre, tu gardes ceux qui vivent dans le même composant que le symptôme, et tu écris un test **rouge** pour chacun. Tu ne corriges pas le jeu.
+A symptom reported by a player is only the visible case. Arcade games always break in the same places, and fixing the symptom alone lets its neighbours through. So you start from the known bugs of the genre, keep those that live in the same component as the symptom, and write a **red** test for each one. You do not fix the game.
 
 ## 1. Catalogue
 
-Le catalogue des bugs connus est `references/bugs-arcade.md`, dans le dossier de ce skill, avec une section `##` par genre de jeu.
+The catalogue of known bugs is `references/bugs-arcade.md`, in this skill's directory, with one `##` section per game genre.
 
-Identifie le genre du jeu (README, code), en anglais (`shoot 'em up`, `platformer`, `maze game`...). Si le catalogue n'a pas de section pour ce genre, ou si l'utilisateur demande de le refaire, lance `bash scripts/catalogue.sh "<genre>"` depuis le dossier du skill. Le script fait la recherche web dans une session séparée qui ignore le bug, pour que le catalogue couvre tout le genre et pas seulement le symptôme. Il peut prendre plusieurs minutes : attends qu'il ait fini.
+Identify the genre of the game (README, code), in English (`shoot 'em up`, `platformer`, `maze game`...). If the catalogue has no section for this genre, or if the user asks for it to be redone, run `bash scripts/catalogue.sh "<genre>"` from the skill's directory. The script does the web search in a separate session that knows nothing of the bug, so that the catalogue covers the whole genre and not only the symptom. It can take several minutes: wait until it has finished.
 
-Lis ensuite la section du genre en entier.
+Then read the genre's section in full.
 
-## 2. Composant
+## 2. Component
 
-Lis le code du jeu. Trouve la fonction qui produit le symptôme, et note comment un test peut l'atteindre par les fonctions exportées. Note dans quel ordre la boucle du jeu appelle ces fonctions à chaque tour. Si la logique vit dans une fonction de rendu, appelle-la avec un faux contexte de canvas, par exemple `new Proxy({}, { get: () => () => {} })`. Repère aussi la convention d'axes, et calcule à partir du code les valeurs limites que le jeu peut produire : vitesse maximale, `dt` plafonné, dimensions. Prends ces limites sur toute la partie (dernier niveau, difficulté maximale), pas seulement au départ. Note ces nombres, les tests s'y référeront.
+Read the game's code. Find the function that produces the symptom, and note how a test can reach it through the exported functions. Note in which order the game loop calls these functions at each turn. If the logic lives in a rendering function, call it with a fake canvas context, for example `new Proxy({}, { get: () => () => {} })`. Also find the axis convention, and compute from the code the limit values the game can produce: maximum speed, capped `dt`, dimensions. Take these limits over the whole game (last level, maximum difficulty), not only at the start. Write these numbers down, the tests will refer to them.
 
-## 3. Sélection
+## 3. Selection
 
-Prends dans le catalogue **toutes** les entrées du composant trouvé. Chaque test retenu doit faire agir la fonction trouvée à l'étape 2 sur les objets du symptôme. Il n'appelle une autre fonction exportée que si l'entrée l'exige (un déplacement, par exemple), et seulement après une première passe de la fonction du symptôme, dans l'ordre de la boucle : une correction écrite dans l'une ou l'autre fonction doit être jugée de la même façon. Une entrée qui porte sur un autre objet teste un autre bug : écarte-la. Écarte aussi les entrées qui décrivent une amélioration de gameplay plutôt qu'un défaut : l'invariant doit être une propriété que le joueur attend déjà du jeu. Ces cas viennent du catalogue et non des tickets ou des tests déjà présents dans le dépôt : c'est ce qui rend la démarche valable sur un jeu sans ticket détaillé.
+Take from the catalogue **all** the entries of the component you found. Each test you keep must make the function found in step 2 act on the objects of the symptom. It calls another exported function only if the entry requires it (a move, for example), and only after a first pass of the symptom's function, in the order of the loop: a correction written in either function must be judged the same way. An entry about another object tests another bug: set it aside. Also set aside the entries that describe a gameplay improvement rather than a defect: the invariant must be a property the player already expects from the game. These cases come from the catalogue and not from the tickets or the tests already in the repository: that is what makes the approach valid on a game without a detailed ticket.
 
-Écris la liste avant de coder : pour chaque entrée, son invariant et pourquoi elle s'applique ici.
+Write the list before coding: for each entry, its invariant and why it applies here.
 
-## 4. Tests rouges, un par un
+## 4. Red tests, one by one
 
-Ajoute les tests à la fin du fichier de tests existant, un `describe` par entrée retenue, et un `test` par variante (chaque côté, chaque axe). L'outil `edit` exige toujours `path`.
+Add the tests at the end of the existing test file, one `describe` per entry kept, and one `test` per variant (each side, each axis). The `edit` tool always requires `path`.
 
-Écris **un seul test à la fois**, et ne passe au suivant qu'une fois celui-ci rouge pour la bonne raison :
+Write **a single test at a time**, and only move on to the next once this one is red for the right reason:
 
-1. écris le test. Il commence par une **précondition** : une assertion qui calcule les bords des objets et vérifie qu'ils se chevauchent, ou se chevaucheront pendant le pas. Elle porte sur l'état que tu as écrit à la main, avant tout appel au code du jeu, et rien n'est vérifié entre deux appels : seul le résultat final compte, puisque la correction peut agir à n'importe quelle étape. Un bug « rien ne se passe » ressemble à un montage sans contact ; seule la précondition les distingue ;
-2. en relisant le code actuel, écris en commentaire la valeur que l'assertion de l'invariant va recevoir aujourd'hui ;
-3. `node --check <fichier>`, puis lance ce seul test (`node --test --test-name-pattern "<nom du test>" <fichier>`) ;
-4. le test doit échouer sur l'assertion de l'invariant, avec la valeur prédite. Un échec sur la précondition, une autre valeur ou une autre erreur veut dire que le montage ne teste pas ce que tu crois : corrige-le avant d'aller plus loin. Un test qui passe déjà ne prouve rien.
+1. write the test. It starts with a **precondition**: an assertion that computes the edges of the objects and checks that they overlap, or will overlap during the step. It bears on the state you wrote by hand, before any call to the game's code, and nothing is checked between two calls: only the final result counts, since the correction can act at any stage. A "nothing happens" bug looks like a setup without contact; only the precondition tells them apart;
+2. by rereading the current code, write in a comment the value the invariant's assertion will receive today;
+3. `node --check <file>`, then run this single test (`node --test --test-name-pattern "<test name>" <file>`);
+4. the test must fail on the invariant's assertion, with the predicted value. A failure on the precondition, another value or another error means the setup does not test what you think: fix it before going further. A test that already passes proves nothing.
 
-Chaque test vérifié de cette façon sert de modèle au suivant.
+Each test checked this way serves as a model for the next one.
 
-Un test rouge n'a de valeur que s'il passe une fois le jeu corrigé, quelle que soit la correction raisonnable. Le montage doit donc n'admettre qu'**un seul** résultat correct :
+A red test is only worth something if it passes once the game is fixed, whatever the reasonable correction. The setup must therefore admit **a single** correct result:
 
-- **isolé** : remplace les collections d'objets de l'état par un ou deux objets écrits à la main, loin des bords. Dans la scène du jeu, l'objet testé touche aussi des voisins et le résultat attendu devient ambigu ;
-- **pénétration franche** : l'objet mobile entre de 2 ou 3 unités par le côté visé et nettement plus sur l'autre axe, pour que le côté touché ne fasse aucun doute. Un objet posé au centre d'un autre n'a pas de côté ;
-- **axe témoin** : une vitesse non nulle sur l'axe qui ne doit pas changer, pour qu'une correction qui inverse tout échoue ;
-- **atteignable** : seulement des positions et des vitesses que le jeu peut produire. Cite en commentaire la valeur limite calculée à l'étape 2 et montre que le montage reste en dessous ;
-- **jugé de l'extérieur** : compare les bords des deux objets par un calcul explicite, et utilise les constantes de direction du jeu. Une fonction du code testé ne peut pas juger ce code.
+- **isolated**: replace the collections of objects of the state with one or two objects written by hand, far from the edges. In the game's scene, the object under test also touches neighbours and the expected result becomes ambiguous;
+- **clear penetration**: the moving object enters by 2 or 3 units through the targeted side and clearly more on the other axis, so that there is no doubt about the side hit. An object placed at the centre of another has no side;
+- **witness axis**: a non-zero speed on the axis that must not change, so that a correction that flips everything fails;
+- **reachable**: only positions and speeds the game can produce. Quote in a comment the limit value computed in step 2 and show that the setup stays below it;
+- **judged from outside**: compare the edges of the two objects by an explicit computation, and use the game's direction constants. A function of the code under test cannot judge that code.
 
-Un cas symétrique fait exception à la pénétration franche et à l'axe témoin : un objet qui entre autant sur les deux axes n'a pas de côté ni d'axe témoin, et le seul résultat correct est symétrique lui aussi (les deux axes réagissent). Ce n'est pas un montage ambigu.
+A symmetric case is an exception to clear penetration and to the witness axis: an object that enters as much on both axes has no side and no witness axis, and the only correct result is symmetric too (both axes react). This is not an ambiguous setup.
 
-Avant d'écrire un cas, écris en commentaire la position de départ et le seul résultat qu'accepterait un jeu corrigé. Si tu en vois deux, change le montage. Commente aussi chaque `describe` en une ligne : l'invariant et l'entrée du catalogue.
+Before writing a case, write in a comment the starting position and the only result a fixed game would accept. If you see two, change the setup. Also comment each `describe` in one line: the invariant and the catalogue entry.
 
-## 5. Vérification
+## 5. Check
 
-Lance la commande de test du projet. C'est fini quand chaque entrée retenue a ses tests, que les tests qui existaient avant passent toujours, et que chaque nouveau test échoue sur une `AssertionError`.
+Run the project's test command. You are done when each entry kept has its tests, the tests that existed before still pass, and each new test fails on an `AssertionError`.
 
-Termine par un tableau : entrée du catalogue, invariant, nom du test, raison de l'échec.
+End with a table: catalogue entry, invariant, test name, reason for the failure.

@@ -25,9 +25,12 @@ the measured repo. That restraint is the subject of the cell: what is measured i
 at a written document is enough for it to be read, and not whether an agent can apply a hint just
 handed to him.
 
-The two skills are copied unchanged from `scripts/skills/` of
-[hands-on-harness](https://github.com/AI-for-dev/hands-on-harness), at commit `9f48fbc`. They are
-written in French, like the course. `dynamic-playtester` ships without
+The two skills come from `scripts/skills/` of
+[hands-on-harness](https://github.com/AI-for-dev/hands-on-harness), at commit `9f48fbc`, translated
+from French into English like the rest of this repository. The translation keeps every rule, URL
+and line of code; the only renames are `references/consignes-catalogue.md`, now
+`references/catalogue-instructions.md`, and the variables of its collection script.
+`dynamic-playtester` ships without
 `references/bugs-arcade.md`: building that catalogue is part of what its cell measures.
 
 The probe is a single file for two jobs: `validators/issue1.py` drops it in a copy of the measured

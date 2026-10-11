@@ -1,7 +1,7 @@
 # The two playtester skills of module 2.1, measured on issue #1.
 #
-# Both skills come from the course, `scripts/skills/` of hands-on-harness, copied unchanged into
-# `materials/skills/`. They do the same thing - turn the reported symptom into red tests, without
+# Both skills come from the course, `scripts/skills/` of hands-on-harness, translated into
+# English in `materials/skills/`. They do the same thing - turn the reported symptom into red tests, without
 # fixing the game - from two catalogues of known breakout bugs: `playtester` carries one written
 # by hand in its `SKILL.md`, `dynamic-playtester` builds one by web search in a separate `pi -p`
 # session, run by its own script.
