@@ -373,6 +373,14 @@ def bounces(run: Assay) -> dict:
       the same, extracted into `step()`        4/4  1/1  4/4  2/2  0/1
       the same + sweep                         4/4  1/1  4/4  2/2  1/1
 
+    A third check, after a `flow` run of `issue1-workflow` on qwen-3.8-27b scored 0/4 on a complete
+    correction. The flow had moved the whole correction into `step()` and left the etalon's block
+    in `frame()`, which switches the brick off without a bounce; the probe called `frame()` first,
+    so `step()` found no brick to bounce on. The game never reaches that block, since `step()`
+    runs first there, so `play()` now undoes what a `frame()` that did not deflect did before it
+    tries `step()`. The same tree then scores 4/4 1/1 4/4 2/2 1/1, the etalon still 0 everywhere,
+    and `test_issue1.py` keeps a tree of that shape.
+
     The five metrics fail or fall silent **together** when the probe could not run: it is a single
     run, so a single thing can be missing.
     """

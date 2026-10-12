@@ -268,10 +268,17 @@ describe('tunneling', () => {
 // deflects the ball stops the manoeuvre.
 //
 // **`frame()` first, and `step()` only if `frame()` changed nothing.** Brick collision lives in
-// `frame()` today, but extracting it into `step()` is a perfectly valid correction: judging on
+// `frame()` today, but moving it into `step()` is a perfectly valid correction: judging on
 // `frame()` alone would score that move as wrong. This fallback does not give a second chance to
 // a wrong answer - a deflection on the wrong axis stays a deflection on the wrong axis - it looks
 // elsewhere when nobody answered.
+//
+// Whatever a `frame()` that did not deflect did to the scene is undone before `step()` runs. A
+// correction moved into `step()` may leave the etalon's block in `frame()`, which switches the
+// brick off without a bounce: in the game, `step()` runs first and that block never sees an
+// overlap, but here it would kill the brick before `step()` could answer, and a complete
+// correction would score nothing. The undo restores the objects in place, so a case that kept a
+// reference to its brick still reads the right one.
 //
 // **Then `frame()` a second time, if the move deflected nothing either.** This is the order in
 // which `boot()` writes its loop: `step()` moves, `frame()` looks at what the move produced.
@@ -288,8 +295,10 @@ function play(t, state, dt = DT) {
   const { vx, vy } = state.ball;
   const moved = () => state.ball.vx !== vx || state.ball.vy !== vy;
 
+  const undo = record(state);
   frame(fakeContext(), state);
   if (moved()) return;
+  undo();
 
   step(state, dt);
   if (moved()) {
@@ -299,6 +308,31 @@ function play(t, state, dt = DT) {
 
   frame(fakeContext(), state);
   if (moved()) t.diagnostic('deflected by frame() after the move made by step()');
+}
+
+// Every plain object and array reachable from `root`, with its own fields at this moment, and the
+// function that puts them back. In place, and only for plain data: anything else a correction
+// hung on the state is kept as it is.
+function record(root) {
+  const saved = new Map();
+  const visit = (value) => {
+    if (value === null || typeof value !== 'object' || saved.has(value)) return;
+    if (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype) return;
+    saved.set(value, Array.isArray(value) ? [...value] : { ...value });
+    for (const child of Object.values(value)) visit(child);
+  };
+  visit(root);
+  return () => {
+    for (const [target, fields] of saved) {
+      if (Array.isArray(target)) {
+        target.length = 0;
+        target.push(...fields);
+      } else {
+        for (const key of Object.keys(target)) delete target[key];
+        Object.assign(target, fields);
+      }
+    }
+  };
 }
 
 // A canvas context that swallows everything. `frame()` only makes drawing calls, so nothing needs
