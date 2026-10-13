@@ -513,6 +513,30 @@ class TestTheReferenceTrees(unittest.TestCase):
         counts.pop("", None)
         self.assertEqual(counts, self.EXPECTED["complete"])
 
+    def test_a_sweep_that_frame_remembers_between_calls_scores(self):
+        """The undo puts back what `frame()` changed, and must keep what it only added.
+
+        A form found in the archives (`agents_no/8f1eeaee` of the DeepSeek-V4.1-Flash n40 matrix,
+        among others): `frame()` sweeps from `state.prevBall` and writes it back at its end, for
+        the next call. In the game `frame()` runs every tick, so that field always exists. An undo
+        that deleted the keys the first `frame()` added left the last `frame()` nothing to sweep
+        from, and scored `tunneling` false on a complete correction.
+        """
+        source = issue1.reference_source((etalon() / issue1.SOURCE_FILE).read_text(), "complete")
+        recorded = "  __record(ball);\n" + issue1.STEP_ANCHOR
+        read = "  const from = __previous.get(ball);\n  __previous.delete(ball);\n"
+        swept = "    __sweep(state, from);\n  }\n}\n"
+        for anchor in (recorded, read, swept):
+            self.assertEqual(source.count(anchor), 1, anchor)
+        source = (
+            source.replace(recorded, issue1.STEP_ANCHOR)
+            .replace(read, "  const from = state.prevBall;\n")
+            .replace(swept, "    __sweep(state, from);\n  }\n  state.prevBall = { x: ball.x, y: ball.y };\n}\n")
+        )
+        counts = self.passed("complete", source)
+        counts.pop("", None)
+        self.assertEqual(counts, self.EXPECTED["complete"])
+
 
 class TestTheReferenceAnchors(unittest.TestCase):
     def test_a_moved_etalon_raises_instead_of_scoring_sideways(self):

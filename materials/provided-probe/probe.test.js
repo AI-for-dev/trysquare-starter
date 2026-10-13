@@ -278,7 +278,9 @@ describe('tunneling', () => {
 // brick off without a bounce: in the game, `step()` runs first and that block never sees an
 // overlap, but here it would kill the brick before `step()` could answer, and a complete
 // correction would score nothing. The undo restores the objects in place, so a case that kept a
-// reference to its brick still reads the right one.
+// reference to its brick still reads the right one. It puts back the fields that were there and
+// keeps the ones `frame()` added: a correction that remembers the ball between two calls, to sweep
+// from where it was, has that memory in the game, where `frame()` runs every tick.
 //
 // **Then `frame()` a second time, if the move deflected nothing either.** This is the order in
 // which `boot()` writes its loop: `step()` moves, `frame()` looks at what the move produced.
@@ -312,7 +314,7 @@ function play(t, state, dt = DT) {
 
 // Every plain object and array reachable from `root`, with its own fields at this moment, and the
 // function that puts them back. In place, and only for plain data: anything else a correction
-// hung on the state is kept as it is.
+// hung on the state is kept as it is, and so is a field added after the record.
 function record(root) {
   const saved = new Map();
   const visit = (value) => {
@@ -328,7 +330,6 @@ function record(root) {
         target.length = 0;
         target.push(...fields);
       } else {
-        for (const key of Object.keys(target)) delete target[key];
         Object.assign(target, fields);
       }
     }
