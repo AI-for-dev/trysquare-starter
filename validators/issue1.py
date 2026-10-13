@@ -100,6 +100,18 @@ SCOPE = frozenset({SOURCE_FILE, TEST_FILE})
 # uses `test(`, and its six cases all start a line.
 TEST_CASE = re.compile(r"^\s*(?:test|it)(?:\.\w+)?\s*\(", re.M)
 
+# The files `npm test` runs: its command is `node --test "game/**/*.test.js"`. `AGENTS.md` only
+# says that the tests run with `npm test`, so a test written in a new file of that glob belongs to
+# the suite as much as one added to `game/neon.test.js`.
+SUITE_DIR = "game"
+SUITE_SUFFIX = ".test.js"
+
+
+def in_suite(path: str) -> bool:
+    """Is `path` a file `node --test "game/**/*.test.js"` runs?"""
+    parts = PurePosixPath(path).parts
+    return len(parts) > 1 and parts[0] == SUITE_DIR and parts[-1].endswith(SUITE_SUFFIX)
+
 # One `describe` of the probe gives one metric. The probe judges nothing, it reports case by case;
 # the grouping is here, in a single place.
 #
@@ -224,11 +236,15 @@ def or_unjudged(read) -> Metric:
 
 
 def tests_added(run: Assay) -> Metric:
-    """Did the agent add test cases to `game/neon.test.js`?
+    """Did the agent add test cases to the suite `npm test` runs?
 
     Issue #1 asks for the edge cases "first as red tests, then green", so this is an explicit
-    requirement of the ticket. Counted against the etalon and not against zero: the file already
-    carries six, so "the file contains tests" would be true for an agent who never touched it.
+    requirement of the ticket. Counted against the etalon and not against zero: the suite already
+    carries six cases, so "the suite contains tests" would be true for an agent who never touched it.
+
+    Every file of `game/**/*.test.js` counts, not only `game/neon.test.js`. 34 archived runs put
+    their tests in a new file of that glob and read false while counting one file only. The probe
+    handed to the `add_tests` cells is left out: it is the harness's work, not the agent's.
 
     The count is an **honest lower bound** and not a coverage measure. An agent who replaces one
     existing case by two new ones scores `+1` although he added two, and a `for` over a table of
@@ -236,25 +252,30 @@ def tests_added(run: Assay) -> Metric:
     enough; "how many" would require running the suite and reading its report, which this
     scenario does not do.
     """
-    reference = TEST_CASE.findall(run.sources_at_etalon(TEST_FILE))
-    file = run.repo / TEST_FILE
+    given = {PROBE_FILE} & run.given
+    before = {
+        name: len(TEST_CASE.findall(run.sources_at_etalon(name)))
+        for name in run.files_at_etalon
+        if in_suite(name)
+    }
+    after = {}
+    for file in run.repo.glob(f"{SUITE_DIR}/**/*{SUITE_SUFFIX}"):
+        name = file.relative_to(run.repo).as_posix()
+        if file.is_file() and name not in given:
+            after[name] = len(TEST_CASE.findall(file.read_text(errors="replace")))
 
-    if not file.is_file():
-        return Metric(False, f"{TEST_FILE} no longer exists in the measured tree")
-
-    after = TEST_CASE.findall(file.read_text(errors="replace"))
-    gained = len(after) - len(reference)
+    total, reference = sum(after.values()), sum(before.values())
+    gained = total - reference
     if gained > 0:
+        grown = sorted(name for name, count in after.items() if count > before.get(name, 0))
         return Metric(
             True,
-            f"{gained} more cases than at the etalon ({len(after)} against {len(reference)})",
+            f"{gained} more cases than at the etalon ({total} against {reference}), "
+            f"in {', '.join(grown)}",
         )
     if gained == 0:
-        return Metric(False, f"{len(after)} cases, same as at the etalon")
-    return Metric(
-        False,
-        f"{-gained} fewer cases than at the etalon ({len(after)} against {len(reference)})",
-    )
+        return Metric(False, f"{total} cases, same as at the etalon")
+    return Metric(False, f"{-gained} fewer cases than at the etalon ({total} against {reference})")
 
 
 def probe_intact(run: Assay) -> Metric:

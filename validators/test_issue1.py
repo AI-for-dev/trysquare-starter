@@ -17,7 +17,7 @@ written it, must fail exactly the defect of each variant. `test_quality` is cove
 These tests need `git`, network access to the repository and `node`; without them they are
 skipped, and every other test still runs offline.
 
-What is not covered yet: the scoring of the probe on an agent's tree, `tests_added`, `in_scope`.
+What is not covered yet: the scoring of the probe on an agent's tree, `in_scope`.
 
     cd validators
     uv run --project .. python -m unittest test_issue1 -v
@@ -124,6 +124,73 @@ class TestSuiteRun(unittest.TestCase):
         metric = issue1.suite_run(Assay.fake(tool_calls=(read("game/neon.js"),)))
         self.assertFalse(metric)
         self.assertIn("no shell call", metric.reason)
+
+
+class TestTestsAdded(unittest.TestCase):
+    """The column counts the cases of the suite `npm test` runs, not of one file of it.
+
+    34 archived runs wrote their tests into a new `game/*.test.js` and read false here, because
+    only `game/neon.test.js` was counted. `AGENTS.md` only says "the tests are run with `npm test`",
+    and `npm test` runs `game/**/*.test.js`: such a file is part of the suite.
+    """
+
+    ETALON = {
+        "game/neon.test.js": "test('a', () => {});\n" * 6,
+        "game/neon.js": "export const x = 1;\n",
+        "README.md": "test('not a test file', () => {});\n",
+    }
+
+    def counted(self, tree: dict[str, str], given: frozenset[str] = frozenset()) -> Metric:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name, text in tree.items():
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_text(text)
+            return issue1.tests_added(
+                Assay.fake(
+                    repo=str(root),
+                    given=given,
+                    files_at_etalon=tuple(self.ETALON),
+                    sources_at_etalon=lambda pattern, exclude=None: self.ETALON[pattern],
+                )
+            )
+
+    def test_cases_added_to_the_existing_file_count(self):
+        metric = self.counted({**self.ETALON, "game/neon.test.js": "test('a', () => {});\n" * 8})
+        self.assertTrue(metric)
+        self.assertIn("2 more cases", metric.reason)
+
+    def test_a_new_test_file_of_the_suite_counts(self):
+        metric = self.counted({**self.ETALON, "game/bricks.test.js": "test('b', () => {});\n" * 3})
+        self.assertTrue(metric)
+        self.assertIn("3 more cases", metric.reason)
+        self.assertIn("game/bricks.test.js", metric.reason)
+
+    def test_a_nested_test_file_of_the_suite_counts(self):
+        metric = self.counted({**self.ETALON, "game/sub/bricks.test.js": "it('b', () => {});\n"})
+        self.assertTrue(metric)
+
+    def test_a_test_file_npm_test_does_not_run_does_not_count(self):
+        metric = self.counted({**self.ETALON, ".scratch/repro.test.js": "test('b', () => {});\n"})
+        self.assertFalse(metric)
+
+    def test_the_provided_probe_is_not_the_agents_work(self):
+        probe = issue1.PROBE.read_text()
+        metric = self.counted(
+            {**self.ETALON, issue1.PROBE_FILE: probe}, given=frozenset({issue1.PROBE_FILE})
+        )
+        self.assertFalse(metric)
+        self.assertIn("same as at the etalon", metric.reason)
+
+    def test_an_untouched_suite_reads_false(self):
+        metric = self.counted(dict(self.ETALON))
+        self.assertFalse(metric)
+        self.assertIn("6 cases, same as at the etalon", metric.reason)
+
+    def test_cases_removed_read_false(self):
+        metric = self.counted({**self.ETALON, "game/neon.test.js": "test('a', () => {});\n" * 4})
+        self.assertFalse(metric)
+        self.assertIn("2 fewer cases", metric.reason)
 
 
 class TestSkillInvoked(unittest.TestCase):
