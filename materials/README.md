@@ -17,6 +17,7 @@ rather than rewriting this one.
 | `SYSTEM-minimal.md` | the agent's system prompt reduced to three lines |
 | `skills/playtester/` | a skill from the course: red tests from a catalogue of breakout bugs written by hand |
 | `skills-loop-order/playtester/` | `skills/playtester/` with one sentence changed: a test of a move calls `step()` then `frame()`, see `hypotheses/issue1-skill.md` |
+| `skills-then-fix/playtester/` | `skills-loop-order/playtester/` with a fifth step: once the tests are red, fix the game until the suite passes, see `hypotheses/issue1-skill.md` |
 | `skills/dynamic-playtester/` | the same procedure, with a catalogue built by web search in a nested `pi -p` session |
 | `skills-grounded/dynamic-playtester/` | `skills/dynamic-playtester/` whose catalogue keeps only entries backed by a page the search opened, with invariants of the form "when <condition>, <value>", see `hypotheses/issue1-skill.md` |
 | `skills-catalogue-given/dynamic-playtester/` | `skills/dynamic-playtester/` shipped with a `references/bugs-arcade.md` already written, so the search is out of the cell, see `hypotheses/issue1-skill.md` |

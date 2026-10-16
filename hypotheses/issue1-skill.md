@@ -172,3 +172,56 @@ tunneling entries, but the sentence about the order of the calls is the original
 what held `playtester` to 10 of its 19 judged runs.
 
 **Runs are shorter than in `dynamic_playtester`.** There is no nested session to wait for.
+
+# `playtester_then_fix`: the red tests first, then the fix
+
+## Why this cell
+
+The skills stop at red tests: "You do not fix the game". In the first matrix the agent alone,
+`nothing`, fixes the faces of the bricks (`bounce_bricks` 18/20) but never the corner or
+tunneling (`bounce_corners` 0/20, `bounce_tunneling` 0/20), while the tests of the skills catch
+exactly those two: `playtester_loop_order` detects the corner in 16 of 19 judged runs and
+tunneling in 18 of 19. The question of this cell is whether tests written first, from a catalogue,
+make the agent fix what it never sees alone.
+
+## The change
+
+`materials/skills-then-fix/playtester/SKILL.md` is the skill of `playtester_loop_order` with the
+introduction, step 4 and the final table changed, and a step 5. Once each new test is red for the
+right reason, the agent fixes the game until the whole suite passes. It changes the game and not
+the tests, with one exception: a setup it finds wrong when it rereads it against the invariant
+(the ball has no face, two results are possible, the position cannot be reached), which it fixes
+and reports in the final table. Weakening an assertion, deleting a test or skipping it is
+forbidden. The skill keeps its name, so the prompt is the same file as `playtester`.
+
+The exception is there because the tests of the first matrix are often wrong: `tests_sound` is
+0/19 in `playtester_loop_order`, nearly always because of the seam test, which places the ball's
+centre on the seam inside both bricks. Without the exception the agent would have to bend the game
+to that test, or weaken it.
+
+## Predictions
+
+The `bounce_*` columns are this cell's result, read against `nothing`.
+
+**`bounce_corners` rises from 0/20 to at least half the runs.** The corner test is sound and
+red in most runs of `playtester_loop_order`, and a corner is a few lines once the two penetrations
+are compared.
+
+**`bounce_tunneling` rises from 0/20, and stays below `bounce_corners`.** Its test is right in
+18 of 19 runs, but fixing it means replacing the detection with a swept one rather than
+completing it, which is the harder change.
+
+**`bounce_bricks` and `bounce_exit` stay at the level of `nothing`, 18/20 and 19/20.** If they
+drop, the fix bent the game to a wrong test.
+
+**`bounce_neighbors` is where a wrong seam test shows.** `nothing` reaches 17/20. If this cell
+falls well below, the agent made the game satisfy the seam test as written instead of fixing its
+setup, and the exception in step 5 does not work.
+
+**`tests_sound` rises above the 0/19 of `playtester_loop_order`**, for the runs where the agent
+fixed a wrong setup on its way to a green suite. The `detects_*` columns are then read on the
+tests as they are after the fix.
+
+**Runs take longer, and some may hit the timeout.** `playtester_loop_order` runs have a median of
+382 s and a maximum of 793 s, out of 1800 s. A run that times out produces nothing, and
+`--until-complete` relaunches it.

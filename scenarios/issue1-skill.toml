@@ -6,10 +6,11 @@
 # by hand in its `SKILL.md`, `dynamic-playtester` builds one by web search in a separate `pi -p`
 # session, run by its own script.
 #
-# Six cells: the base, each skill invoked by name on the same careless request, a copy of
-# `playtester` whose only change is the order in which a test of a move calls the game, and two
-# copies of `dynamic-playtester`: one whose catalogue must come from the pages its search opened,
-# one that ships with its catalogue already written.
+# Seven cells: the base, each skill invoked by name on the same careless request, a copy of
+# `playtester` whose only change is the order in which a test of a move calls the game, a copy of
+# that one which goes on to fix the game, and two copies of `dynamic-playtester`: one whose
+# catalogue must come from the pages its search opened, one that ships with its catalogue already
+# written.
 #
 # What is measured is the tests, not the fix. The agent's test files are run against reference
 # trees - the etalon, the complete correction, and five corrections that each lack one part of
@@ -77,6 +78,15 @@ harness = ["skills-playtester"]
 prompt = "../materials/issue1-simple-prompt-with-playtester.md"
 harness = ["skills-playtester-loop-order"]
 
+# The same request and the same skill name as `playtester_loop_order`, from a copy of its skill
+# that no longer stops at red tests: once each test is red for the right reason, the agent fixes
+# the game until the whole suite passes, changing the game and not the tests, except for a setup it
+# finds wrong and reports. The `bounce_*` columns are this cell's result, read against `nothing`.
+# `hypotheses/issue1-skill.md` says what it should change.
+[presets.playtester_then_fix]
+prompt = "../materials/issue1-simple-prompt-with-playtester.md"
+harness = ["skills-playtester-then-fix"]
+
 # The careless request, prefixed with `/skill:dynamic-playtester`. The skill has no catalogue to
 # start with, so its first step runs `scripts/catalogue.sh`, which starts a nested `pi -p` session
 # with the web search of `web-access`.
@@ -109,11 +119,12 @@ harness = ["skills-dynamic-playtester-catalogue-given", "web-access"]
 #
 # `nothing` is the base: the careless request alone. Each skill is read against it, and the two
 # skills against each other, since they differ only by their catalogue and how it is obtained.
-# `playtester_loop_order` is read against `playtester`, which differs from it by one sentence, and
+# `playtester_loop_order` is read against `playtester`, which differs from it by one sentence,
+# `playtester_then_fix` against `nothing` on the `bounce_*` columns, and
 # `dynamic_playtester_grounded` and `dynamic_playtester_catalogue_given` against `dynamic_playtester`.
 
 [axes]
-lever = ["nothing", "playtester", "dynamic_playtester", "playtester_loop_order", "dynamic_playtester_grounded", "dynamic_playtester_catalogue_given"]
+lever = ["nothing", "playtester", "dynamic_playtester", "playtester_loop_order", "dynamic_playtester_grounded", "dynamic_playtester_catalogue_given", "playtester_then_fix"]
 
 # --- Harness bricks --------------------------------------------------------
 
@@ -128,6 +139,10 @@ paths = ["../materials/skills/playtester"]
 [harness.skills-playtester-loop-order]
 kind = "skills"
 paths = ["../materials/skills-loop-order/playtester"]
+
+[harness.skills-playtester-then-fix]
+kind = "skills"
+paths = ["../materials/skills-then-fix/playtester"]
 
 [harness.skills-dynamic-playtester]
 kind = "skills"
