@@ -6,9 +6,10 @@
 # by hand in its `SKILL.md`, `dynamic-playtester` builds one by web search in a separate `pi -p`
 # session, run by its own script.
 #
-# Five cells: the base, each skill invoked by name on the same careless request, a copy of
-# `playtester` whose only change is the order in which a test of a move calls the game, and a copy
-# of `dynamic-playtester` whose catalogue must come from the pages its search opened.
+# Six cells: the base, each skill invoked by name on the same careless request, a copy of
+# `playtester` whose only change is the order in which a test of a move calls the game, and two
+# copies of `dynamic-playtester`: one whose catalogue must come from the pages its search opened,
+# one that ships with its catalogue already written.
 #
 # What is measured is the tests, not the fix. The agent's test files are run against reference
 # trees - the etalon, the complete correction, and five corrections that each lack one part of
@@ -22,8 +23,8 @@
 [scenario]
 name = "issue1-skill"
 title = "playtester against dynamic-playtester, on the bounce of issue #1"
-# The hypothesis covers only the `playtester_loop_order` and `dynamic_playtester_grounded` cells:
-# it was written after the three other cells had been measured, and says so.
+# The hypothesis covers only the cells added after the first matrix: it was written after the
+# three other cells had been measured, and says so.
 hypothesis = "../hypotheses/issue1-skill.md"
 
 [task]
@@ -94,15 +95,25 @@ harness = ["skills-dynamic-playtester", "web-access"]
 prompt = "../materials/issue1-simple-prompt-with-dynamic-playtester.md"
 harness = ["skills-dynamic-playtester-grounded", "web-access"]
 
+# The same request, the same skill name and the same bricks as `dynamic_playtester`, from a copy of
+# the skill that ships with `references/bugs-arcade.md` already written, with a `brick breaker`
+# section. The skill only runs `catalogue.sh` when the catalogue has no section for the genre, so
+# this cell measures the tests written from a given catalogue, without the search. `web-access`
+# stays, so that an agent that decides to rebuild the catalogue anyway can, and its session shows
+# it. `hypotheses/issue1-skill.md` says where the catalogue comes from and what it should change.
+[presets.dynamic_playtester_catalogue_given]
+prompt = "../materials/issue1-simple-prompt-with-dynamic-playtester.md"
+harness = ["skills-dynamic-playtester-catalogue-given", "web-access"]
+
 # --- Cells -----------------------------------------------------------------
 #
 # `nothing` is the base: the careless request alone. Each skill is read against it, and the two
 # skills against each other, since they differ only by their catalogue and how it is obtained.
 # `playtester_loop_order` is read against `playtester`, which differs from it by one sentence, and
-# `dynamic_playtester_grounded` against `dynamic_playtester`.
+# `dynamic_playtester_grounded` and `dynamic_playtester_catalogue_given` against `dynamic_playtester`.
 
 [axes]
-lever = ["nothing", "playtester", "dynamic_playtester", "playtester_loop_order", "dynamic_playtester_grounded"]
+lever = ["nothing", "playtester", "dynamic_playtester", "playtester_loop_order", "dynamic_playtester_grounded", "dynamic_playtester_catalogue_given"]
 
 # --- Harness bricks --------------------------------------------------------
 
@@ -136,6 +147,10 @@ paths = ["../materials/skills/dynamic-playtester"]
 [harness.skills-dynamic-playtester-grounded]
 kind = "skills"
 paths = ["../materials/skills-grounded/dynamic-playtester"]
+
+[harness.skills-dynamic-playtester-catalogue-given]
+kind = "skills"
+paths = ["../materials/skills-catalogue-given/dynamic-playtester"]
 
 [harness.web-access]
 repo = "webaccess"
