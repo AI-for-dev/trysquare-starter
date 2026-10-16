@@ -18,6 +18,7 @@ rather than rewriting this one.
 | `skills/playtester/` | a skill from the course: red tests from a catalogue of breakout bugs written by hand |
 | `skills-loop-order/playtester/` | `skills/playtester/` with one sentence changed: a test of a move calls `step()` then `frame()`, see `hypotheses/issue1-skill.md` |
 | `skills/dynamic-playtester/` | the same procedure, with a catalogue built by web search in a nested `pi -p` session |
+| `skills-grounded/dynamic-playtester/` | `skills/dynamic-playtester/` whose catalogue keeps only entries backed by a page the search opened, with invariants of the form "when <condition>, <value>", see `hypotheses/issue1-skill.md` |
 | `remove-issues-md.sh` | the `setup` script of the `blind` cells and of `issue1-skill`: deletes `ISSUES.md` |
 | `issue1-flow-prompt.md` | the well crafted request, handed to `/run issue1` in the `flow` cell of `issue1-workflow` |
 | `flows/issue1.md` | the combo flow of the workflows module, adapted to issue #1 |

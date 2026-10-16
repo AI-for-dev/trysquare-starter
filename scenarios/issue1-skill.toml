@@ -6,8 +6,9 @@
 # by hand in its `SKILL.md`, `dynamic-playtester` builds one by web search in a separate `pi -p`
 # session, run by its own script.
 #
-# Four cells: the base, each skill invoked by name on the same careless request, and a copy of
-# `playtester` whose only change is the order in which a test of a move calls the game.
+# Five cells: the base, each skill invoked by name on the same careless request, a copy of
+# `playtester` whose only change is the order in which a test of a move calls the game, and a copy
+# of `dynamic-playtester` whose catalogue must come from the pages its search opened.
 #
 # What is measured is the tests, not the fix. The agent's test files are run against reference
 # trees - the etalon, the complete correction, and five corrections that each lack one part of
@@ -21,8 +22,8 @@
 [scenario]
 name = "issue1-skill"
 title = "playtester against dynamic-playtester, on the bounce of issue #1"
-# The hypothesis covers only the `playtester_loop_order` cell: it was written after the three
-# other cells had been measured, and says so.
+# The hypothesis covers only the `playtester_loop_order` and `dynamic_playtester_grounded` cells:
+# it was written after the three other cells had been measured, and says so.
 hypothesis = "../hypotheses/issue1-skill.md"
 
 [task]
@@ -82,14 +83,26 @@ harness = ["skills-playtester-loop-order"]
 prompt = "../materials/issue1-simple-prompt-with-dynamic-playtester.md"
 harness = ["skills-dynamic-playtester", "web-access"]
 
+# The same request and the same skill name as `dynamic_playtester`, from a copy of the skill whose
+# catalogue has to come from pages the search opened. The collection reports its failures and the
+# nested session answers `NO SOURCES` when no page was kept, `scripts/check-sources.mjs` removes
+# every entry whose source is not one of those pages, and the skill stops instead of writing tests
+# when no catalogue is left. Each invariant has to name a condition and a value. The nested
+# session is kept in `references/catalogue-session/`, so trysquare archives it with the skill.
+# `hypotheses/issue1-skill.md` says what it should change.
+[presets.dynamic_playtester_grounded]
+prompt = "../materials/issue1-simple-prompt-with-dynamic-playtester.md"
+harness = ["skills-dynamic-playtester-grounded", "web-access"]
+
 # --- Cells -----------------------------------------------------------------
 #
 # `nothing` is the base: the careless request alone. Each skill is read against it, and the two
 # skills against each other, since they differ only by their catalogue and how it is obtained.
-# `playtester_loop_order` is read against `playtester`, which differs from it by one sentence.
+# `playtester_loop_order` is read against `playtester`, which differs from it by one sentence, and
+# `dynamic_playtester_grounded` against `dynamic_playtester`.
 
 [axes]
-lever = ["nothing", "playtester", "dynamic_playtester", "playtester_loop_order"]
+lever = ["nothing", "playtester", "dynamic_playtester", "playtester_loop_order", "dynamic_playtester_grounded"]
 
 # --- Harness bricks --------------------------------------------------------
 
@@ -120,6 +133,10 @@ paths = ["../materials/skills/dynamic-playtester"]
 #
 # The nested session runs `pi -p --no-session`: its searches, its tokens and its cost appear
 # nowhere in the archive, so the cost of the `dynamic_playtester` cell is under-counted.
+[harness.skills-dynamic-playtester-grounded]
+kind = "skills"
+paths = ["../materials/skills-grounded/dynamic-playtester"]
+
 [harness.web-access]
 repo = "webaccess"
 tag = "v0.38.0"
