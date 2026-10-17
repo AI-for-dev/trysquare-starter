@@ -5,9 +5,9 @@ afterwards, all measured against the bounce of issue #1 of NEON:
 
 - `issue1-context`, the context levers of module 2.1, in nine configurations: one lever at a time,
   two of them again without the project's history, then two stacks;
-- `issue1-skill`, the two playtester skills of module 2.1, in three configurations: the careless
+- `issue1-skill`, the two playtester skills of module 2.2, in three configurations: the careless
   request alone, then with `playtester`, then with `dynamic-playtester`;
-- `issue1-workflow`, the workflow of module 2.2 against a single agent, in two configurations.
+- `issue1-workflow`, the workflow of module 2.5 against a single agent, in two configurations.
 
 The commands below name `issue1-context`. Replace it with the name of another scenario to run it.
 
@@ -137,7 +137,7 @@ A scenario names a repository by a logical name, `repo = "neon"`, and only a con
 what that name points at on this machine. trysquare looks for `trysquare.toml` by walking up from
 the scenario, so this one covers the whole directory. It holds three tables. `[repos]` and
 `[harness]` resolve the logical names. `[isolation]` runs each agent in a docker container,
-bounded to one CPU and 4 GB, and names the two files the containers get their provider from:
+bounded to one CPU and 2 GB, and names the two files the containers get their provider from:
 `models.json` declares the providers and the models, and `.env` holds the keys. The keys never
 enter a container: trysquare hands it a placeholder and swaps in the real key on a relay running
 on the host. `.env` is personal and stays out of git.
@@ -187,8 +187,8 @@ attempts = 5
 ```
 
 `concurrency` is how many runs trysquare launches at the same time. Lower it if your provider rate
-limits you, or if the machine cannot take it: each container is held to one CPU and 4 GB, so 5
-of them need 5 CPUs and 20 GB. `run` takes `--repetitions`, `--concurrency` and
+limits you, or if the machine cannot take it: each container is held to one CPU and 2 GB, so 5
+of them need 5 CPUs and 10 GB. `run` takes `--repetitions`, `--concurrency` and
 `--timeout` as overrides for one run, and records them, so trying a lower concurrency does not
 mean editing the scenario; `attempts` is read from the file only.
 
@@ -198,8 +198,8 @@ one says something, so the values that run are the ones above.
 ## The cost
 
 Twenty repetitions over nine configurations make 180 runs for `issue1-context`, and over three
-configurations 60 runs for `issue1-skill`. At 5 at a time with a 1800 s timeout, `--dry-run`
-bounds them at 18 and 6 hours, plus the tokens that go with them; runs that finish
+configurations 60 runs for `issue1-skill`. At 5 at a time, with a timeout of 1800 s for the
+first and 3600 s for the second, `--dry-run` bounds them at 18 and 12 hours, plus the tokens that go with them; runs that finish
 before the timeout bring it down, and a provider that takes more concurrency does too. Start with
 `--dry-run`, which spends nothing, then with `--repetitions 3`.
 
@@ -233,13 +233,14 @@ adds the two stacks. `scenarios/issue1-context.toml` says in a comment why each 
 
 `issue1-skill` measures the two playtester skills of the course against the careless request
 alone, with `ISSUES.md` and the history removed from every cell. Both skills turn the symptom into
-red tests without fixing the game: `playtester` from a catalogue of breakout bugs written in its
-`SKILL.md`, `dynamic-playtester` from a catalogue it builds by web search, in a nested `pi -p`
-session that loads the pi-web-access extension. Since these cells produce tests rather than a
-fix, the scenario judges the tests: the agent's test files run against the etalon, a complete
-correction (`validators/reference-fix.js`) and five corrections that each lack one part of it,
-and its criterion is `detects_axis`, a test that catches a correction flipping `vy` on every
-face.
+red tests, then fix the game until they pass: `playtester` from a catalogue of breakout bugs
+written in its `SKILL.md`, `dynamic-playtester` from `references/bugs-arcade.md`, a catalogue
+built by web search and versioned with the skill. The skill only rebuilds it, in a nested `pi -p`
+session that loads the pi-web-access extension, when it has no section for the genre. The probe
+scores the fix, as in `issue1-context`, and the scenario also judges the tests: the agent's test
+files run against the etalon, a complete correction (`validators/reference-fix.js`) and five
+corrections that each lack one part of it, and its criterion is `detects_axis`, a test that
+catches a correction flipping `vy` on every face.
 
 The criterion of `issue1-context` is `bounce_bricks`, and it is a probe rather than a pattern in
 the diff:

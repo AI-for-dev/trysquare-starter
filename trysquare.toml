@@ -35,6 +35,6 @@ combo = "https://github.com/AI-for-dev/combo"
 [isolation]
 backend = "docker"
 cpus = 1
-memory = "4g"
+memory = "2g"
 models = "models.json"
 secrets = ".env"

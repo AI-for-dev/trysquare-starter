@@ -47,14 +47,14 @@ wheels = [
 
 [[package]]
 name = "trysquare"
-version = "0.12.0"
+version = "0.12.2"
 source = { registry = "https://test.pypi.org/simple/" }
 dependencies = [
     { name = "rich" },
 ]
-sdist = { url = "https://test-files.pythonhosted.org/packages/fc/f5/8d8a53927bbe6ea6e2ccc05a36df5dec612d6d6619113035d537cbef6870/trysquare-0.12.0.tar.gz", hash = "sha256:40fcc07008b5ad781c05665a27140f7eab0746008a06d9e3316e2acf6e649839", size = 575445, upload-time = "2026-10-11T09:43:15.453Z" }
+sdist = { url = "https://test-files.pythonhosted.org/packages/9c/2b/6b42b44144b01edc5303aff1fbe373d886a1ac533b244582e315c0caa2b4/trysquare-0.12.2.tar.gz", hash = "sha256:d18aaa2370bdb473eec1615d0ccd14e49307fe26e89f5982f1496bc492577a9a", size = 577092, upload-time = "2026-10-14T13:45:19.857Z" }
 wheels = [
-    { url = "https://test-files.pythonhosted.org/packages/79/de/01c491e93f7c1dd655fce2cba548b303301fc9d90fb384b9bc8b3d84fd03/trysquare-0.12.0-py3-none-any.whl", hash = "sha256:38fd0f8099f9c64e865b362a035e15d9746499510848ccc0400bce4bde703d98", size = 208008, upload-time = "2026-10-11T09:43:13.619Z" },
+    { url = "https://test-files.pythonhosted.org/packages/f2/da/b265dffcfe84b4cc0669871cc88c00e927e35eb1e5d1616010b4f3187493/trysquare-0.12.2-py3-none-any.whl", hash = "sha256:c0b7650dceb6055711a5f06ec3d984ad6397415fb9e973c0b2a015afa6615be3", size = 208782, upload-time = "2026-10-14T13:45:17.974Z" },
 ]
 
 [[package]]
@@ -66,4 +66,4 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "trysquare", specifier = ">=0.12.0", index = "https://test.pypi.org/simple/" }]
+requires-dist = [{ name = "trysquare", specifier = ">=0.12.2", index = "https://test.pypi.org/simple/" }]
