@@ -1,16 +1,333 @@
 {
     "providers": {
-        "my-provider": {
-            "baseUrl": "https://my-provider.com/api/v1",
+        "ia4dev-ilaas": {
+            "name": "ILAAS",
+            "baseUrl": "https://devllm.ilaas.fr/v1",
             "api": "openai-completions",
-            "apiKey": "$MY_PROVIDER_API_KEY",
+            "apiKey": "$ILAAS_API_KEY",
             "models": [
                 {
-                    "id": "my-model",
-                    "name": "My Model",
+                    "id": "scaleway/glm-5.2",
+                    "name": "scaleway/glm-5.2",
+                    "input": [
+                        "text"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "off": null,
+                        "minimal": null,
+                        "low": null,
+                        "medium": null
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 256000,
+                    "maxTokens": 16384,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false
+                    }
+                },
+                {
+                    "id": "scaleway/glm-5.3",
+                    "name": "scaleway/glm-5.3",
+                    "input": [
+                        "text"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "off": null,
+                        "minimal": null,
+                        "low": null,
+                        "medium": null
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 256000,
+                    "maxTokens": 16384,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false
+                    }
+                },
+                {
+                    "id": "scaleway/deepseek-v4.1-flash",
+                    "name": "scaleway/deepseek-v4.1-flash",
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "off": null,
+                        "minimal": null,
+                        "low": null,
+                        "medium": null
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 256000,
+                    "maxTokens": 32768,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false
+                    }
+                },
+                {
+                    "id": "scaleway/deepseek-v4-flash-0731",
+                    "name": "scaleway/deepseek-v4-flash-0731",
+                    "input": [
+                        "text"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "off": null,
+                        "minimal": null,
+                        "low": null,
+                        "medium": null
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 256000,
+                    "maxTokens": 32768,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false
+                    }
+                },
+                {
+                    "id": "qwen-3.6-35b-instruct",
+                    "name": "qwen-3.6-35b-instruct",
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "minimal": null,
+                        "low": null,
+                        "medium": null
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 262144,
+                    "maxTokens": 32768,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false,
+                        "thinkingFormat": "qwen-chat-template"
+                    }
+                },
+                {
+                    "id": "gemma-4-31b",
+                    "name": "gemma-4-31b",
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "minimal": null,
+                        "low": null,
+                        "medium": null
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 131072,
+                    "maxTokens": 32768,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false,
+                        "thinkingFormat": "qwen-chat-template"
+                    }
+                },
+                {
+                    "id": "mistral-small-4-119b",
+                    "name": "mistral-small-4-119b",
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "reasoning": false,
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
                     "contextWindow": 128000,
                     "maxTokens": 32768,
-                    "reasoning": true
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false
+                    }
+                },
+                {
+                    "id": "mistral-medium-latest",
+                    "name": "mistral-medium-latest",
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "reasoning": false,
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 128000,
+                    "maxTokens": 32768,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false
+                    }
+                }
+            ]
+        },
+        "ia4dev-gricad": {
+            "name": "IA4Dev",
+            "baseUrl": "https://ia4dev-owui.univ-grenoble-alpes.fr/api",
+            "api": "openai-completions",
+            "apiKey": "$IA4DEV_API_KEY",
+            "models": [
+                {
+                    "id": "qwen-3.8-27b",
+                    "name": "qwen-3.8-27b",
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "minimal": null,
+                        "low": "low",
+                        "medium": "medium",
+                        "high": "xhigh"
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 262144,
+                    "maxTokens": 32768,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false,
+                        "thinkingFormat": "chat-template",
+                        "chatTemplateKwargs": {
+                            "enable_thinking": {
+                                "$var": "thinking.enabled"
+                            },
+                            "preserve_thinking": true,
+                            "reasoning_effort": {
+                                "$var": "thinking.effort",
+                                "omitWhenOff": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "id": "ARES/DeepSeek-V4.1-Flash",
+                    "name": "ARES/DeepSeek-V4.1-Flash",
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "minimal": null,
+                        "low": "low",
+                        "medium": "high",
+                        "high": "max"
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 1048576,
+                    "maxTokens": 32768,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false,
+                        "thinkingFormat": "chat-template",
+                        "chatTemplateKwargs": {
+                            "enable_thinking": {
+                                "$var": "thinking.enabled"
+                            },
+                            "preserve_thinking": true,
+                            "reasoning_effort": {
+                                "$var": "thinking.effort",
+                                "omitWhenOff": true
+                            }
+                        }
+                    }
+                },
+                {
+                    "id": "gemma-4-31b",
+                    "name": "gemma-4-31b",
+                    "input": [
+                        "text",
+                        "image"
+                    ],
+                    "reasoning": true,
+                    "thinkingLevelMap": {
+                        "minimal": null,
+                        "low": null,
+                        "medium": null
+                    },
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    },
+                    "contextWindow": 159488,
+                    "maxTokens": 32768,
+                    "compat": {
+                        "supportsDeveloperRole": false,
+                        "supportsStore": false,
+                        "supportsReasoningEffort": false,
+                        "thinkingFormat": "qwen-chat-template"
+                    }
                 }
             ]
         }
