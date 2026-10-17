@@ -7,10 +7,10 @@ DIR=$(cd "$(dirname "$0")/.." && pwd)
 GENRE=${1:?usage: catalogue.sh <genre>}
 MODEL=${PI_MODEL:+${PI_PROVIDER:+$PI_PROVIDER/}$PI_MODEL}
 
-# Searching and summarising needs little reasoning: --thinking low cuts the generation time.
+# The session runs at --thinking medium.
 # The collection goes through codemode: one script runs every pi-web-access search
 # and opens the pages in a single turn, instead of one model turn per call.
-pi -p --no-session --no-skills --no-context-files --thinking low \
+pi -p --no-session --no-skills --no-context-files --thinking medium \
   --tools codemode,web_search,fetch_content,read,write \
   ${MODEL:+--model "$MODEL"} \
   "$(cat "$DIR/references/catalogue-instructions.md")

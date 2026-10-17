@@ -103,6 +103,14 @@ Before writing a case, write in a comment the starting position and the only res
 
 ## 4. Check
 
-Run the project's test command. You are done when each entry kept has its tests, the tests that existed before still pass, and each new test fails on an `AssertionError`.
+Run the project's test command. Move on to the fix when each entry kept has its tests, the tests that existed before still pass, and each new test fails on an `AssertionError`. Do not change the game before that point.
 
-End with a table: catalogue entry, invariant, test name, reason for the failure.
+## 5. Fix
+
+Fix the game until the whole suite passes. Change the game's code, not the tests.
+
+If a test still fails on a fix you believe correct, reread its setup against the invariant of its entry. When the setup is wrong (the ball has no face, two results are possible, the position cannot be reached), fix the setup and say so in the final table. Never weaken an assertion, delete a test or skip it to make the suite pass: a test that only passes once weakened no longer checks its invariant.
+
+Run the project's test command once more at the end. You are done when every test passes, the old ones and the new ones.
+
+End with a table: catalogue entry, invariant, test name, reason for the first failure, and whether its setup was changed during the fix.

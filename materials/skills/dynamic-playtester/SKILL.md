@@ -11,7 +11,7 @@ A symptom reported by a player is only the visible case. Arcade games always bre
 
 The catalogue of known bugs is `references/bugs-arcade.md`, in this skill's directory, with one `##` section per game genre.
 
-Identify the genre of the game (README, code), in English (`shoot 'em up`, `platformer`, `maze game`...). If the catalogue has no section for this genre, or if the user asks for it to be redone, run `bash scripts/catalogue.sh "<genre>"` from the skill's directory. The script does the web search in a separate session that knows nothing of the bug, so that the catalogue covers the whole genre and not only the symptom. It can take several minutes: wait until it has finished.
+Identify the genre of the game (README, code), in English (`shoot 'em up`, `platformer`, `maze game`...). The sections were named by another session, which may have picked another name for the same genre (`brick breaker` and `breakout`, `shmup` and `shoot 'em up`): a section for an equivalent or very close genre counts as a match, use it. Only if no section fits, or if the user asks for it to be redone, run `bash scripts/catalogue.sh "<genre>"` from the skill's directory. The script does the web search in a separate session that knows nothing of the bug, so that the catalogue covers the whole genre and not only the symptom. It can take several minutes: wait until it has finished.
 
 Then read the genre's section in full.
 
@@ -52,6 +52,14 @@ Before writing a case, write in a comment the starting position and the only res
 
 ## 5. Check
 
-Run the project's test command. You are done when each entry kept has its tests, the tests that existed before still pass, and each new test fails on an `AssertionError`.
+Run the project's test command. Move on to the fix when each entry kept has its tests, the tests that existed before still pass, and each new test fails on an `AssertionError`. Do not change the game before that point.
 
-End with a table: catalogue entry, invariant, test name, reason for the failure.
+## 6. Fix
+
+Fix the game until the whole suite passes. Change the game's code, not the tests.
+
+If a test still fails on a fix you believe correct, reread its setup against the invariant of its entry. When the setup is wrong (the ball has no face, two results are possible, the position cannot be reached), fix the setup and say so in the final table. Never weaken an assertion, delete a test or skip it to make the suite pass: a test that only passes once weakened no longer checks its invariant.
+
+Run the project's test command once more at the end. You are done when every test passes, the old ones and the new ones.
+
+End with a table: catalogue entry, invariant, test name, reason for the first failure, and whether its setup was changed during the fix.
