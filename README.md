@@ -43,15 +43,28 @@ yourself.
 pi then needs a provider and an API key. The runs do not read `~/.pi/agent/models.json`: the
 containers get their providers from `models.json` at the root of this repository, which has the
 shape described in [the pi documentation](https://pi.dev/docs/latest/providers) and names each key
-as a variable, such as `$MY_PROVIDER_API_KEY`. The key itself is personal, so it cannot come from
-this repository: copy `.env.example` to `.env` and write your key there.
+as a variable, such as `$ILAAS_API_KEY`. The key itself is personal, so it cannot come from
+this repository: copy `.env.example` to `.env` and write your keys there.
 
 ```bash
 cp .env.example .env
 ```
 
-`models.json` declares a placeholder provider, `my-provider`. Replace its URL, its model and the
-name of its key variable with your provider's, and keep the variable name the same in `.env`.
+`models.json` declares the two providers of the course, `ia4dev-ilaas` and `ia4dev-gricad`, with
+the same names, servers and model settings as the [`@ai-for-dev/providers`](https://github.com/AI-for-dev/providers)
+pi package. trysquare cannot load that package in a run: it starts pi without extensions, never
+copies the `auth.json` a `/login` writes, and only relays a key for a provider `models.json`
+describes. So `models.json` is generated from the package, and you regenerate it when the package
+changes, from a clone of it:
+
+```bash
+npm ci
+npm run export-models -- ../trysquare-starter/models.json
+```
+
+`IA4DEV_ILAAS_BASE_URL` and `IA4DEV_GRICAD_BASE_URL` change a server's URL in the export, as they
+do in the package. To use a provider of your own, add it to `models.json` by hand and its key to
+`.env`.
 
 The scenario declares the provider and the model it expects, so read `[agent]` in
 `scenarios/issue1-context.toml` and make sure `models.json` declares that provider, or change those
@@ -171,8 +184,8 @@ thinking = "off"
 
 They are declared in the scenario, and never inherited from the shell, because they are the two
 values that decide what is being measured: an environment variable would make them invisible to
-whoever reads the file. Both are placeholders: set them to the provider and the model your `models.json` declares
-before running.
+whoever reads the file. Both are placeholders: set them to a provider `models.json` declares and
+one of its models before running.
 The tables published in the course were measured on `ilaas` and `gemma-4-31b`, against commit
 `d62ccd1f` of NEON.
 
